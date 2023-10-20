@@ -1,0 +1,78 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61", "setuptools_scm[toml]>=7"]
+
+
+[project]
+name = "caikit_nlp_client"
+dynamic = ["version"]
+description = "caikit-nlp client"
+# license =  "Apache-2.0"
+license = { text = "Apache License 2.0" }
+
+readme = "README.md"
+classifiers=[
+    "License :: OSI Approved :: Apache Software License",
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+authors = [
+    { name = "Vaibhav Jain", email = "vajain@redhat.com" },
+    { name = "Laurentiu Bradin", email = "laurentiu.bradin@ibm.com" },
+    { name = "Daniele Trifirò", email = "dtrifiro@redhat.com" },
+]
+requires-python = ">=3.9"
+
+dependencies = [
+    "grpcio-reflection==1.59.2",
+    "requests==2.31.0"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["tests", "tests.*"]
+namespaces = false
+
+[project.optional-dependencies]
+dev = [
+    "ruff==0.1.4",
+    "grpcio-tools==1.59.2",
+    "caikit_nlp_client[types]"
+]
+types = [
+    "types-requests==2.31.0.10",
+    "types-protobuf==4.24.0.4"
+]
+tests = [
+    "pytest",
+    "pytest-cov",
+    "coverage[toml]",
+    "grpcio-health-checking",
+    "caikit-nlp @ git+https://github.com/caikit/caikit-nlp@4a5b2f8",
+    "caikit @ git+https://github.com/caikit/caikit",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]
+
+[tool.pytest.ini_options]
+log_cli=true
+log_format = "%(asctime)s %(levelname)s %(message)s"
+log_date_format = "%Y-%m-%d %H:%M:%S"
+addopts = "-ra --cov-config pyproject.toml"
+
+[tool.coverage.run]
+branch = true
+source = ["caikit_nlp_client", "tests"]
+
+[tool.ruff.lint]
+select = [ "E", "F", "UP", "B", "SIM", "I"]
+ignore = []
+
+[tool.ruff]
+line-length = 88
