@@ -1,0 +1,46 @@
+name: Lint
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  tests:
+    name: ${{ matrix.session }} ${{ matrix.python }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        python: ["3.9", "3.10", "3.11"]
+        session: ["mypy"]
+        include:
+          - { python: "3.10", os: "ubuntu-latest", session: "typeguard" }
+
+    env:
+      NOXSESSION: ${{ matrix.session }}
+      FORCE_COLOR: "1"
+      PRE_COMMIT_COLOR: "always"
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v4.7.1
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Upgrade pip
+        run: |
+          pip install -U pip
+          pip --version
+
+      - name: Install Nox
+        run: |
+          pip install nox
+          nox --version
+
+      - name: Run Nox
+        run: |
+          nox --python=${{ matrix.python }} --session ${{ matrix.session }}

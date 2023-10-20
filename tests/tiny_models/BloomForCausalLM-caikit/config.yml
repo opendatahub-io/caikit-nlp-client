@@ -1,0 +1,12 @@
+artifact_path: artifacts
+caikit_nlp_version: 0.2.2.dev117+g4f42230
+created: '2023-11-03 19:03:10.711277'
+eos_token: </s>
+module_class: caikit_nlp.modules.text_generation.text_generation_local.TextGeneration
+module_id: f9181353-4ccf-4572-bd1e-f12bcda26792
+name: Text Generation
+saved: '2023-11-03 19:03:10.711283'
+torch_dtype: torch.float32
+tracking_id: 6eca26e9-4420-447e-bd2e-87c87c535195
+training_logs: training_logs.jsonl
+version: 0.1.0

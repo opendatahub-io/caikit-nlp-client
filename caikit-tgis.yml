@@ -1,0 +1,11 @@
+runtime:
+  library: caikit_nlp
+  local_models_dir: ./caikit-nlp-client
+  lazy_load_local_models: true
+  grpc:
+    enabled: true
+  http:
+    enabled: true
+
+log:
+  formatter: pretty
