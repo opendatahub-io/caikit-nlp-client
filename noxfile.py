@@ -116,9 +116,11 @@ def precommit(session: nox.Session) -> None:
 def mypy(session: nox.Session) -> None:
     """Type-check using mypy."""
     args = session.posargs or ["src", "tests"]
-    session.install(".[types]")
-    session.install("mypy", "pytest")
-    session.run("mypy", *args)
+    session.install(
+        "--index-url=https://download.pytorch.org/whl/cpu", "torch"
+    )  # use torch-cpu to speed up tests
+    session.install(".[dev,tests]")
+    session.run("python", "-m", "mypy", *args)
     if not session.posargs:
         session.run("mypy", f"--python-executable={sys.executable}", "noxfile.py")
 
@@ -153,7 +155,5 @@ def coverage(session: nox.Session) -> None:
 @nox.session(python=python_versions[1])
 def typeguard(session: nox.Session) -> None:
     """Runtime type checking using Typeguard."""
-    session.install(".")
-    session.install("pytest", "typeguard", "pygments", "pytest-cov")
-    session.install(".[tests]")
+    session.install(".[tests]", "typeguard", "pygments")
     session.run("pytest", f"--typeguard-packages={package}", *session.posargs)
