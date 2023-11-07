@@ -133,7 +133,15 @@ def tests(session: nox.Session) -> None:
     )  # use torch-cpu to speed up tests
     session.install(".[tests]")
     try:
-        session.run("coverage", "run", "--parallel", "-m", "pytest", *session.posargs)
+        session.run(
+            "coverage",
+            "run",
+            "--parallel",
+            "-m",
+            "pytest",
+            *session.posargs,
+            env={"COVERAGE_FILE": f".coverage.{session.python}"},
+        )
     finally:
         if session.interactive:
             session.notify("coverage", posargs=[])
