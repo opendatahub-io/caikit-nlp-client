@@ -53,7 +53,7 @@ tests = [
     "coverage[toml]",
     "grpcio-health-checking",
     "caikit-nlp @ git+https://github.com/caikit/caikit-nlp@4a5b2f8",
-    "caikit @ git+https://github.com/caikit/caikit",
+    "caikit[runtime-grpc,runtime-http]>=0.23.2,<0.25.0",
 ]
 
 [tool.bandit]
