@@ -18,5 +18,3 @@ pip install nox
 nox --list  # list available sessions
 nox --python 3.10 -s tests # run tests session for a specific python version
 ```
-
-> > > > > > > 0291428 (Initial commit)
