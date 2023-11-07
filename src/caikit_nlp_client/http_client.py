@@ -61,14 +61,14 @@ class HTTPCaikitNlpClient:
             json_input = create_json_request(model_id, text, **kwargs)
             response = requests.post(self.api_url, json=json_input, timeout=10)
             log.debug(f"Response: {response}")
-            result = response.text
+            result: str = response.text
             log.info("Calling generate_text was successful")
             return result
         except Exception as exc:
             log.exception(f"Caught exception {exc}, re-throwing")
             raise exc
 
-    def generate_text_stream(self, model_id: str, text: str, **kwargs) -> [str]:
+    def generate_text_stream(self, model_id: str, text: str, **kwargs) -> list[str]:
         """Queries the `text-generation` stream endpoint for the given model_id
 
         Args:
@@ -109,5 +109,6 @@ def create_json_request(model_id, text, **kwargs) -> dict[str, Any]:
         "inputs": text,
         "parameters": {"max_new_tokens": 200, "min_new_tokens": 10},
     }
-    json_input.get("parameters").update(kwargs)
+    if parameters := json_input.get("parameters"):
+        parameters.update(kwargs)
     return json_input
