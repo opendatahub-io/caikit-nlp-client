@@ -4,10 +4,9 @@ from typing import Callable, TypeVar
 
 import pytest
 import requests
+from caikit_nlp_client.grpc_channel import GrpcChannelConfig, make_channel
+from caikit_nlp_client.http_config import HTTPConfig
 from grpc_health.v1 import health_pb2, health_pb2_grpc
-
-from src.caikit_nlp_client.grpc_channel import GrpcChannelConfig, make_channel
-from src.caikit_nlp_client.http_config import HTTPConfig
 
 _T = TypeVar("_T")
 
