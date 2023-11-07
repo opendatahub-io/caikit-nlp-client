@@ -53,13 +53,14 @@ jobs:
         run: |
           import hashlib
           import sys
+          import os
 
           python = "py{}.{}".format(*sys.version_info[:2])
           payload = sys.version.encode() + sys.executable.encode()
           digest = hashlib.sha256(payload).hexdigest()
-          result = "${{ runner.os }}-{}-{}-pre-commit".format(python, digest[:8])
-
-          print("::set-output name=result::{}".format(result))
+          result = f"${{ runner.os }}-{python}-{digest[:8]}-pre-commit"
+          with open(os.getenv("GITHUB_OUTPUT"), "a") as fh:
+              fh.write(f"name={result}")
 
       - name: Restore pre-commit cache
         uses: actions/cache@v3
