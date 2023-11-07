@@ -51,3 +51,4 @@ dmypy.json
 .pyre/
 
 .ruff_cache/
+.vscode/
