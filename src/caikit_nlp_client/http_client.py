@@ -1,11 +1,21 @@
 import logging
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Optional
 
 import requests
 
-from src.caikit_nlp_client.http_config import HTTPConfig
-
 log = logging.getLogger(__name__)
+
+
+@dataclass
+class HTTPConfig:
+    host: str
+    port: int
+    tls: bool = False
+    mtls: bool = False
+    client_key: Optional[str] = None
+    client_crt: Optional[str] = None
+    server_crt: Optional[str] = None
 
 
 class HTTPCaikitNlpClient:
