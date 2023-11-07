@@ -79,6 +79,7 @@ ignore = []
 
 [tool.ruff]
 line-length = 88
+target-version = "py39"
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
