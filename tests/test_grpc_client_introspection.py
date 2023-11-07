@@ -1,8 +1,5 @@
 import pytest
-
-from src.caikit_nlp_client.grpc_client_introspection import (
-    GrpcCaikitNlpClientIntrospection,
-)
+from caikit_nlp_client.grpc_client_introspection import GrpcCaikitNlpClientIntrospection
 
 
 @pytest.fixture

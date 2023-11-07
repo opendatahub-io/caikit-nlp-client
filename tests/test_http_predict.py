@@ -1,6 +1,5 @@
 import pytest
-
-from src.caikit_nlp_client.http_client import HTTPCaikitNlpClient
+from caikit_nlp_client.http_client import HTTPCaikitNlpClient
 
 
 @pytest.fixture
