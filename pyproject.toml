@@ -74,6 +74,10 @@ skip_empty = true
 show_missing = true
 fail_under = 50
 
+[tool.coverage.paths]
+source = ["src"]
+tests = ["tests"]
+
 [tool.ruff]
 line-length = 88
 target-version = "py39"
