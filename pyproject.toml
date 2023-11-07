@@ -70,6 +70,9 @@ addopts = "-ra --cov-config pyproject.toml"
 branch = true
 source = ["caikit_nlp_client", "tests"]
 
+[tool.coverage.report]
+skip_empty = true
+
 [tool.ruff.lint]
 select = [ "E", "F", "UP", "B", "SIM", "I"]
 ignore = []
