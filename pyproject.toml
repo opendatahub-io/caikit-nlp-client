@@ -92,6 +92,7 @@ ignore = []
 ignore_missing_imports = true
 module = [
     "caikit",
+    "caikit.*",
     "grpc",
     "grpc_health.v1",
     "caikit.runtime.grpc_server",

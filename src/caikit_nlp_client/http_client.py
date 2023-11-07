@@ -93,9 +93,11 @@ class HTTPCaikitNlpClient:
         try:
             log.info(f"Calling generate_text_stream for '{model_id}'")
             json_input = create_json_request(model_id, text, **kwargs)
-            response = requests.post(self.stream_api_url, json=json_input, timeout=10)
+            response = requests.post(  # FIXME: just a stub implementation
+                self.stream_api_url, json=json_input, timeout=10
+            )
             log.debug(f"Response: {response}")
-            result = response.text
+            result = [response.text]
             log.info("Calling generate_text_stream was successful")
             return result
         except Exception as exc:
