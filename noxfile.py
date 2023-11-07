@@ -154,5 +154,6 @@ def coverage(session: nox.Session) -> None:
 def typeguard(session: nox.Session) -> None:
     """Runtime type checking using Typeguard."""
     session.install(".")
-    session.install("pytest", "typeguard", "pygments")
+    session.install("pytest", "typeguard", "pygments", "pytest-cov")
+    session.install(".[tests]")
     session.run("pytest", f"--typeguard-packages={package}", *session.posargs)
