@@ -14,7 +14,6 @@ def connected_client(channel):
 class GenerateTextTestData:
     model_id: str
     input_text: str
-    expected_text: str
     preserve_input_text: bool
     max_new_tokens: int
     min_new_tokens: int
@@ -24,7 +23,6 @@ TEST_CASES: list[GenerateTextTestData] = [
     GenerateTextTestData(
         "BertForSequenceClassification-caikit",
         "Hello, my dog is cute",
-        "hello, my dog is cuteρ 白ᅩ xʒ ハ ܬ 河 水ʒ セタ x x セ v セ 河 興 セ",
         True,
         20,
         5,
@@ -32,7 +30,6 @@ TEST_CASES: list[GenerateTextTestData] = [
     GenerateTextTestData(
         "BloomForCausalLM-caikit",
         "Hello stub",
-        "Hello stububububububububububububububububububububub",
         True,
         20,
         5,
@@ -40,7 +37,6 @@ TEST_CASES: list[GenerateTextTestData] = [
     GenerateTextTestData(
         "T5ForConditionalGeneration-caikit",
         "Hello, Mr. Bond!",
-        "",
         True,
         20,
         5,
@@ -50,18 +46,38 @@ TEST_CASES: list[GenerateTextTestData] = [
 STREAMING_TEST_CASES: list[GenerateTextTestData] = []
 
 
-@pytest.mark.parametrize("test_case", TEST_CASES)
-def test_generate_text(connected_client, test_case):
+@pytest.mark.parametrize(
+    "test_case, expected_text",
+    (
+        (
+            TEST_CASES[0],
+            "hello, my dog is cuteρ 白ᅩ xʒ ハ ܬ 河 水ʒ セタ x x セ v セ 河 興 セ",
+        ),
+        (TEST_CASES[1], "Hello stububububububububububububububububububububub"),
+        (TEST_CASES[2], ""),
+    ),
+)
+def test_generate_text(connected_client, test_case, expected_text):
     generated_text = connected_client.generate_text(
         test_case.model_id,
         test_case.input_text,
     )
 
-    assert generated_text == test_case.expected_text
+    assert generated_text == expected_text
 
 
-@pytest.mark.parametrize("test_case", TEST_CASES)
-def test_generate_text_with_optional_args(connected_client, test_case):
+@pytest.mark.parametrize(
+    "test_case, expected_text",
+    (
+        (
+            TEST_CASES[0],
+            "hello, my dog is cuteρ 白ᅩ xʒ ハ ܬ 河 水ʒ セタ x x セ v セ 河 興 セ",
+        ),
+        (TEST_CASES[1], "Hello stububububububububububububububububububububub"),
+        (TEST_CASES[2], ""),
+    ),
+)
+def test_generate_text_with_optional_args(connected_client, test_case, expected_text):
     generated_text = connected_client.generate_text(
         test_case.model_id,
         test_case.input_text,
@@ -69,7 +85,7 @@ def test_generate_text_with_optional_args(connected_client, test_case):
         max_new_tokens=test_case.max_new_tokens,
         min_new_tokens=test_case.min_new_tokens,
     )
-    assert generated_text == test_case.expected_text
+    assert generated_text == expected_text
 
 
 def test_generate_text_with_no_model_id(connected_client):
@@ -77,19 +93,22 @@ def test_generate_text_with_no_model_id(connected_client):
         connected_client.generate_text("", "What does foobar mean?")
 
 
-# @pytest.mark.parametrize("test_case", STREAMING_TEST_CASES)
 @pytest.mark.xfail(reason="None of the models defined support streaming")
-def test_generate_text_stream(connected_client, test_case):
+@pytest.mark.parametrize("test_case,expected_text", ())
+def test_generate_text_stream(connected_client, test_case, expected_text):
     results = connected_client.generate_text_stream(
         test_case.model_id,
         test_case.input_text,
     )
     assert results
+    assert "".join(results) == expected_text
 
 
-# @pytest.mark.parametrize("test_case", STREAMING_TEST_CASES)
 @pytest.mark.xfail(reason="None of the models defined support streaming")
-def test_generate_text_stream_with_optional_args(connected_client, test_case):
+@pytest.mark.parametrize("test_case, expected_text", ())
+def test_generate_text_stream_with_optional_args(
+    connected_client, test_case, expected_text
+):
     results = connected_client.generate_text_stream(
         test_case.model_id,
         test_case.input_text,
@@ -98,3 +117,4 @@ def test_generate_text_stream_with_optional_args(connected_client, test_case):
         min_new_tokens=test_case.min_new_tokens,
     )
     assert results
+    assert "".join(results) == expected_text
