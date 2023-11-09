@@ -17,6 +17,13 @@ class HTTPConfig:
     client_crt_path: Optional[str] = None
     ca_crt_path: Optional[str] = None
 
+    def __post_init__(self):
+        if self.mtls and not self.client_key_path:
+            raise ValueError("must provide a client_key_path with mTLS")
+
+        if self.mtls and self.tls:
+            raise ValueError("mTLS and TLS are mutually exclusive")
+
 
 class HTTPCaikitNlpClient:
     """HTTP client for a caikit nlp runtime server
