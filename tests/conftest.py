@@ -99,7 +99,7 @@ def caikit_nlp_runtime(grpc_server_port, http_server_port):
         "log": {"formatter": "pretty"},
     }
     if not insecure:
-        config_dict["runtime"]["tls"] = {
+        config["runtime"]["tls"] = {
             "server": {
                 "key": SERVER_KEY_FILE,
                 "cert": SERVER_CERT_FILE,
@@ -118,13 +118,13 @@ def get_random_port():
 
 @pytest.fixture(scope="session")
 def grpc_server_port():
-    """port for caikit grpc runtime"""
+    """default port for caikit grpc runtime"""
     return get_random_port()
 
 
 @pytest.fixture(scope="session")
 def http_server_port():
-    """port for caikit grpc runtime"""
+    """default port for caikit grpc runtime"""
     return get_random_port()
 
 
