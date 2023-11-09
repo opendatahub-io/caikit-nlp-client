@@ -1,8 +1,6 @@
 import pytest
 from caikit_nlp_client.http_client import HTTPCaikitNlpClient
 
-pytestmark = pytest.mark.parametrize("insecure_value", [True])
-
 
 @pytest.fixture
 def http_client(http_config, http_server) -> HTTPCaikitNlpClient:
