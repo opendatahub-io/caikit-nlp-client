@@ -64,9 +64,10 @@ def model_name():
     return available_models[0]
 
 
-@pytest.fixture(scope="session")
-def insecure():
-    yield False
+# FIXME: allow for the code to generate fixtures with either insecure or secure
+# connections
+def insecure() -> bool:
+    return False
 
 
 @pytest.fixture(scope="session")
@@ -297,7 +298,7 @@ def mock_text_generation(
 
 
 @pytest.fixture(scope="session")
-def http_server(caikit_nlp_runtime, http_config, mock_text_generation):
+def http_server(caikit_nlp_runtime, http_config, mock_text_generation, insecure):
     from caikit.runtime.http_server import RuntimeHTTPServer
 
     http_server = RuntimeHTTPServer()
