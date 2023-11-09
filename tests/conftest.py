@@ -1,7 +1,9 @@
+import socket
 import time
 from pathlib import Path
 from typing import Callable, TypeVar
 
+import caikit
 import pytest
 import requests
 from caikit_nlp_client.grpc_channel import GrpcChannelConfig, make_channel
@@ -39,23 +41,54 @@ def model_name():
 
 
 @pytest.fixture
-def caikit_nlp_runtime(monkeypatch):
-    """configures caikit by setting environment variables"""
-    monkeypatch.setenv("RUNTIME_LIBRARY", "caikit_nlp")
-    # make caikit runtime logs readable: it logs in json by default
-    monkeypatch.setenv("LOG_FORMATTER", "pretty")
-    monkeypatch.setenv(
-        "RUNTIME_LOCAL_MODELS_DIR",
-        str(Path(__file__).parent / "tiny_models"),
-    )
-    monkeypatch.setenv("RUNTIME_HTTP_PORT", "8080")
-    # TODO: add port configuration here using `RUNTIME_GRPC_PORT`
+def caikit_nlp_runtime(grpc_server_port, http_server_port):
+    models_directory = str(Path(__file__).parent / "tiny_models")
+
+    tgis_backend_config = [
+        {
+            "type": "TGIS",
+            "config": {"connection": {"hostname": "localhost:8033"}},
+        }
+    ]
+    config = {
+        "merge_strategy": "merge",
+        "runtime": {
+            "local_models_dir": models_directory,
+            "library": "caikit_nlp",
+            "lazy_load_local_models": True,
+            "grpc": {"enabled": True, "port": grpc_server_port},
+            "http": {"enabled": True, "port": http_server_port},
+        },
+        "model_management": {
+            "initializers": {
+                "default": {
+                    "type": "LOCAL",
+                    "config": {"backend_priority": tgis_backend_config},
+                }
+            }
+        },
+        "log": {"formatter": "pretty"},
+    }
+
+    caikit.config.configure(config_dict=config)
+
+
+def get_random_port():
+    sock = socket.socket()
+    sock.bind(("", 0))
+    return sock.getsockname()[1]
+
+
+@pytest.fixture
+def grpc_server_port():
+    """port for caikit grpc runtime"""
+    return get_random_port()
 
 
 @pytest.fixture()
-def grpc_server_port():
-    """default port for caikit grpc runtime"""
-    return 8085
+def http_server_port():
+    """port for caikit grpc runtime"""
+    return get_random_port()
 
 
 def channel_factory(host: str, port: int):
