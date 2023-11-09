@@ -1,3 +1,4 @@
+import os
 import socket
 import time
 from collections.abc import Iterable
@@ -12,6 +13,18 @@ from caikit_nlp_client.http_client import HTTPConfig
 from grpc_health.v1 import health_pb2, health_pb2_grpc
 
 _T = TypeVar("_T")
+
+CA_CERT_FILE = str(Path(__file__).parent / "resources/ca.pem")
+CLIENT_KEY_FILE = str(Path(__file__).parent / "resources/client-key.pem")
+CLIENT_CERT_FILE = str(Path(__file__).parent / "resources/client.pem")
+SERVER_KEY_FILE = str(Path(__file__).parent / "resources/server-key.pem")
+SERVER_CERT_FILE = str(Path(__file__).parent / "resources/server.pem")
+
+CA_CERT_FILE = str(Path(__file__).parent / "resources/ca.pem")
+CLIENT_KEY_FILE = str(Path(__file__).parent / "resources/client-key.pem")
+CLIENT_CERT_FILE = str(Path(__file__).parent / "resources/client.pem")
+SERVER_KEY_FILE = str(Path(__file__).parent / "resources/server-key.pem")
+SERVER_CERT_FILE = str(Path(__file__).parent / "resources/server.pem")
 
 
 @pytest.fixture(scope="session")
@@ -98,30 +111,33 @@ def http_server_port():
     return get_random_port()
 
 
-def channel_factory(host: str, port: int):
-    config = GrpcChannelConfig(
-        host=host,
-        port=port,
-        insecure=True,  # TODO: handle cases with secure=True with self signed certs
-    )
+def channel_factory(host: str, port: int, insecure: bool):
+    config = GrpcChannelConfig(host=host, port=port, insecure=insecure)
+    if insecure:
+        return make_channel(config)
+    config.ca_cert = load_secret(CA_CERT_FILE)
+    config.client_key = load_secret(CLIENT_KEY_FILE)
+    config.client_cert = load_secret(CLIENT_CERT_FILE)
     return make_channel(config)
 
 
 @pytest.fixture(scope="session")
-def channel(grpc_server_port, grpc_server):
+def channel(grpc_server_port, grpc_server, insecure: bool):
     """Returns returns a grpc client connected to a locally running server"""
-    return channel_factory("localhost", grpc_server_port)
+    return channel_factory("localhost", grpc_server_port, insecure)
 
 
 @pytest.fixture(scope="session")
-def grpc_server(caikit_nlp_runtime, grpc_server_port, mock_text_generation):
+def grpc_server(
+    caikit_nlp_runtime, grpc_server_port, mock_text_generation, insecure: bool
+):
     from caikit.runtime.grpc_server import RuntimeGRPCServer
 
     grpc_server = RuntimeGRPCServer()
     grpc_server.start(blocking=False)
 
     def health_check():
-        channel = channel_factory("localhost", grpc_server_port)
+        channel = channel_factory("localhost", grpc_server_port, insecure)
         stub = health_pb2_grpc.HealthStub(channel)
         health_check_request = health_pb2.HealthCheckRequest()
         stub.Check(health_check_request)
@@ -134,14 +150,20 @@ def grpc_server(caikit_nlp_runtime, grpc_server_port, mock_text_generation):
 
 
 @pytest.fixture(scope="session")
-def http_config(caikit_nlp_runtime):
-    from caikit.config import get_config
-
-    return HTTPConfig(
+def http_config(caikit_nlp_runtime, insecure: bool):
+    http_config = HTTPConfig(
         host="localhost",
-        port=get_config().runtime.http.port,
-        tls=False,
+        port=caikit.config.get_config().runtime.http.port,
     )
+    if insecure:
+        return http_config
+
+    http_config.tls = True
+    http_config.client_crt_path = CLIENT_CERT_FILE
+    http_config.client_key_path = CLIENT_KEY_FILE
+    http_config.ca_crt_path = CA_CERT_FILE
+
+    return http_config
 
 
 @pytest.fixture(scope="session")
@@ -262,9 +284,17 @@ def http_server(caikit_nlp_runtime, http_config, mock_text_generation):
     http_server.start(blocking=False)
 
     def health_check():
-        response = requests.get(
-            f"http://{http_config.host}:{http_config.port}/health",
-        )
+        if insecure:
+            response = requests.get(
+                f"http://{http_config.host}:{http_config.port}/health",
+            )
+        else:
+            response = requests.get(
+                f"https://{http_config.host}:{http_config.port}/health",
+                verify=http_config.ca_crt_path,
+                cert=(http_config.client_crt_path, http_config.client_key_path),
+            )
+
         assert response.status_code == 200
         assert response.text == "OK"
 
@@ -273,3 +303,12 @@ def http_server(caikit_nlp_runtime, http_config, mock_text_generation):
     yield http_server
 
     http_server.stop()
+
+
+def load_secret(secret: str) -> bytes:
+    """If the secret points to a file, return the contents as bytes.
+    Else return the string as bytes"""
+    if os.path.exists(secret):
+        with open(secret, encoding="utf-8") as secret_file:
+            return bytes(secret_file.read(), "utf-8")
+    return bytes(secret, "utf-8")
