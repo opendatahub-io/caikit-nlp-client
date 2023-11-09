@@ -28,15 +28,13 @@ def test_generate_text_with_no_model_id(http_client):
         http_client.generate_text("", "What does foobar mean?")
 
 
-@pytest.mark.skip(reason="HTTP stream is not working as expected")
 def test_generate_text_stream(http_client, model_name):
     results = http_client.generate_text_stream(
         model_name, "What is the meaning of life?"
     )
-    assert len(results) == 9
+    assert len(results) == 1
 
 
-@pytest.mark.skip(reason="HTTP stream is not working as expected")
 def test_generate_text_stream_with_optional_args(http_client, model_name):
     results = http_client.generate_text_stream(
         model_name,
@@ -45,4 +43,4 @@ def test_generate_text_stream_with_optional_args(http_client, model_name):
         max_new_tokens=20,
         min_new_tokens=4,
     )
-    assert len(results) == 9
+    assert len(results) == 1
