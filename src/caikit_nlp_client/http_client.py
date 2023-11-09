@@ -29,7 +29,9 @@ class HTTPCaikitNlpClient:
         protocol = "https" if (http_config.mtls or http_config.tls) else "http"
         base_url = f"{protocol}://{http_config.host}:{http_config.port}"
         text_generation_endpoint = "/api/v1/task/text-generation"
-        text_generation_stream_endpoint = "/api/v1/task/server-streaming-text"
+        text_generation_stream_endpoint = (
+            "/api/v1/task/server-streaming-text-generation"
+        )
 
         self.api_url = f"{base_url}{text_generation_endpoint}"
         self.stream_api_url = f"{base_url}{text_generation_stream_endpoint}"
