@@ -44,12 +44,6 @@ def model_name():
 def caikit_nlp_runtime(grpc_server_port, http_server_port):
     models_directory = str(Path(__file__).parent / "tiny_models")
 
-    tgis_backend_config = [
-        {
-            "type": "TGIS",
-            "config": {"connection": {"hostname": "localhost:8033"}},
-        }
-    ]
     config = {
         "merge_strategy": "merge",
         "runtime": {
@@ -63,7 +57,6 @@ def caikit_nlp_runtime(grpc_server_port, http_server_port):
             "initializers": {
                 "default": {
                     "type": "LOCAL",
-                    "config": {"backend_priority": tgis_backend_config},
                 }
             }
         },
