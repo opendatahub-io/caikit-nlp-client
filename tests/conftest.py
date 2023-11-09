@@ -66,6 +66,7 @@ def model_name():
 
 # FIXME: allow for the code to generate fixtures with either insecure or secure
 # connections
+@pytest.fixture(scope="session")
 def insecure() -> bool:
     return False
 
