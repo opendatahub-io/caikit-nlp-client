@@ -14,6 +14,12 @@ from grpc_health.v1 import health_pb2, health_pb2_grpc
 _T = TypeVar("_T")
 
 
+@pytest.fixture(scope="session")
+def monkeysession():
+    with pytest.MonkeyPatch.context() as mp:
+        yield mp
+
+
 def wait_until(pred: Callable[..., _T], timeout: float, pause: float = 0.1) -> _T:
     start = time.perf_counter()
     exc = None
@@ -41,7 +47,7 @@ def model_name():
     return available_models[0]
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def caikit_nlp_runtime(grpc_server_port, http_server_port):
     models_directory = str(Path(__file__).parent / "tiny_models")
 
@@ -80,13 +86,13 @@ def get_random_port():
     return sock.getsockname()[1]
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def grpc_server_port():
     """port for caikit grpc runtime"""
     return get_random_port()
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def http_server_port():
     """port for caikit grpc runtime"""
     return get_random_port()
@@ -101,13 +107,13 @@ def channel_factory(host: str, port: int):
     return make_channel(config)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def channel(grpc_server_port, grpc_server):
     """Returns returns a grpc client connected to a locally running server"""
     return channel_factory("localhost", grpc_server_port)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def grpc_server(caikit_nlp_runtime, grpc_server_port, mock_text_generation):
     from caikit.runtime.grpc_server import RuntimeGRPCServer
 
@@ -127,7 +133,7 @@ def grpc_server(caikit_nlp_runtime, grpc_server_port, mock_text_generation):
     grpc_server.stop()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def http_config(caikit_nlp_runtime):
     from caikit.config import get_config
 
@@ -138,7 +144,7 @@ def http_config(caikit_nlp_runtime):
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def caikit_test_producer():
     from caikit.interfaces.nlp.data_model.text_generation import ProducerId
 
@@ -148,12 +154,12 @@ def caikit_test_producer():
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def generated_text():
     yield "mocked generated text result"
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def generated_text_result(caikit_test_producer, generated_text):
     from caikit.interfaces.nlp.data_model.text_generation import (
         FinishReason,
@@ -172,7 +178,7 @@ def generated_text_result(caikit_test_producer, generated_text):
 
 # FIXME: Validate text stream mocking. There's a lot of logic here.
 #        Can this be simplified?
-@pytest.fixture
+@pytest.fixture(scope="session")
 def generated_text_stream_result(caikit_test_producer, generated_text):
     from caikit.interfaces.nlp.data_model.text_generation import (
         FinishReason,
@@ -208,9 +214,9 @@ def generated_text_stream_result(caikit_test_producer, generated_text):
     return result
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def mock_text_generation(
-    generated_text_result, generated_text_stream_result, monkeypatch
+    generated_text_result, generated_text_stream_result, monkeysession
 ):
     # import caikit_nlp.modules.text_generation.text_generation_local
     import caikit_nlp.modules.text_generation.text_generation_tgis
@@ -239,7 +245,7 @@ def mock_text_generation(
         ) -> Iterable[GeneratedTextStreamResult]:
             yield from generated_text_stream_result
 
-    monkeypatch.setattr(
+    monkeysession.setattr(
         caikit_nlp.modules.text_generation.text_generation_tgis,
         "TGISGenerationClient",
         StubTGISGenerationClient,
@@ -248,7 +254,7 @@ def mock_text_generation(
     yield
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def http_server(caikit_nlp_runtime, http_config, mock_text_generation):
     from caikit.runtime.http_server import RuntimeHTTPServer
 
