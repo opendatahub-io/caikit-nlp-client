@@ -1,6 +1,5 @@
 import pytest
-from caikit_nlp_client.grpc_client_introspection import \
-    GrpcCaikitNlpClientIntrospection
+from caikit_nlp_client.grpc_client_introspection import GrpcCaikitNlpClientIntrospection
 
 pytestmark = pytest.mark.parametrize("insecure_value", [True, False])
 
