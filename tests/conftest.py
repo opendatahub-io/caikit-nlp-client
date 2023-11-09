@@ -98,6 +98,14 @@ def caikit_nlp_runtime(grpc_server_port, http_server_port):
         },
         "log": {"formatter": "pretty"},
     }
+    if not insecure:
+        config_dict["runtime"]["tls"] = {
+            "server": {
+                "key": SERVER_KEY_FILE,
+                "cert": SERVER_CERT_FILE,
+            }
+        }
+
 
     caikit.config.configure(config_dict=config)
 
