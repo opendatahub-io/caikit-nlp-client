@@ -113,6 +113,9 @@ class HTTPCaikitNlpClient:
             log.info(f"Calling generate_text_stream for '{model_id}'")
             json_input = create_json_request(model_id, text, **kwargs)
             if self.config.tls:
+                assert self.config.client_key_path
+                assert self.config.client_crt_path
+
                 response = requests.post(
                     self.stream_api_url,
                     json=json_input,
