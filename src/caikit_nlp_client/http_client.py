@@ -13,9 +13,9 @@ class HTTPConfig:
     port: int
     tls: bool = False
     mtls: bool = False
-    client_key: Optional[str] = None
-    client_crt: Optional[str] = None
-    server_crt: Optional[str] = None
+    client_key_path: Optional[str] = None
+    client_crt_path: Optional[str] = None
+    ca_crt_path: Optional[str] = None
 
 
 class HTTPCaikitNlpClient:
@@ -35,6 +35,7 @@ class HTTPCaikitNlpClient:
 
         self.api_url = f"{base_url}{text_generation_endpoint}"
         self.stream_api_url = f"{base_url}{text_generation_stream_endpoint}"
+        self.config = http_config
 
     def generate_text(self, model_id: str, text: str, **kwargs) -> str:
         """Queries the `text-generation` endpoint for the given model_id
@@ -61,7 +62,16 @@ class HTTPCaikitNlpClient:
         try:
             log.info(f"Calling generate_text for '{model_id}'")
             json_input = create_json_request(model_id, text, **kwargs)
-            response = requests.post(self.api_url, json=json_input, timeout=10)
+            if self.config.tls:
+                response = requests.post(
+                    self.api_url,
+                    json=json_input,
+                    timeout=10.0,
+                    verify=self.config.ca_crt_path,
+                    cert=(self.config.client_crt_path, self.config.client_key_path),
+                )
+            else:
+                response = requests.post(self.api_url, json=json_input, timeout=10.0)
             log.debug(f"Response: {response}")
             result: str = response.text
             log.info("Calling generate_text was successful")
@@ -95,9 +105,19 @@ class HTTPCaikitNlpClient:
         try:
             log.info(f"Calling generate_text_stream for '{model_id}'")
             json_input = create_json_request(model_id, text, **kwargs)
-            response = requests.post(  # FIXME: just a stub implementation
-                self.stream_api_url, json=json_input, timeout=10
-            )
+            if self.config.tls:
+                response = requests.post(
+                    self.stream_api_url,
+                    json=json_input,
+                    timeout=10.0,
+                    verify=self.config.ca_crt_path,
+                    cert=(self.config.client_crt_path, self.config.client_key_path),
+                )
+            else:
+                response = requests.post(
+                    self.stream_api_url, json=json_input, timeout=10.0
+                )
+
             log.debug(f"Response: {response}")
             result = [response.text]
             log.info("Calling generate_text_stream was successful")
