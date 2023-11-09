@@ -30,6 +30,7 @@ CLIENT_CERT_FILE = str(Path(__file__).parent / "resources/client.pem")
 SERVER_KEY_FILE = str(Path(__file__).parent / "resources/server-key.pem")
 SERVER_CERT_FILE = str(Path(__file__).parent / "resources/server.pem")
 
+
 @pytest.fixture(scope="session")
 def monkeysession():
     with pytest.MonkeyPatch.context() as mp:
@@ -63,17 +64,13 @@ def model_name():
     return available_models[0]
 
 
-@pytest.fixture(autouse=True)
-def insecure(insecure_value):
-    yield insecure_value
+@pytest.fixture(scope="session")
+def insecure():
+    yield False
 
-
-@pytest.fixture(autouse=True)
-def insecure(insecure_value):
-    yield insecure_value
 
 @pytest.fixture(scope="session")
-def caikit_nlp_runtime(grpc_server_port, http_server_port):
+def caikit_nlp_runtime(grpc_server_port, http_server_port, insecure):
     models_directory = str(Path(__file__).parent / "tiny_models")
 
     tgis_backend_config = [
@@ -109,7 +106,6 @@ def caikit_nlp_runtime(grpc_server_port, http_server_port):
             }
         }
 
-
     caikit.config.configure(config_dict=config)
 
 
@@ -121,6 +117,7 @@ def get_random_port():
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         port = s.getsockname()[1]
         return port
+
 
 @pytest.fixture(scope="session")
 def grpc_server_port():
