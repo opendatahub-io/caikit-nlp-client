@@ -20,12 +20,15 @@ CLIENT_CERT_FILE = str(Path(__file__).parent / "resources/client.pem")
 SERVER_KEY_FILE = str(Path(__file__).parent / "resources/server-key.pem")
 SERVER_CERT_FILE = str(Path(__file__).parent / "resources/server.pem")
 
+WAIT_TIME_OUT = 10
+
+WAIT_TIME_OUT = 10
+
 CA_CERT_FILE = str(Path(__file__).parent / "resources/ca.pem")
 CLIENT_KEY_FILE = str(Path(__file__).parent / "resources/client-key.pem")
 CLIENT_CERT_FILE = str(Path(__file__).parent / "resources/client.pem")
 SERVER_KEY_FILE = str(Path(__file__).parent / "resources/server-key.pem")
 SERVER_CERT_FILE = str(Path(__file__).parent / "resources/server.pem")
-
 
 @pytest.fixture(scope="session")
 def monkeysession():
@@ -111,10 +114,13 @@ def caikit_nlp_runtime(grpc_server_port, http_server_port):
 
 
 def get_random_port():
-    sock = socket.socket()
-    sock.bind(("", 0))
-    return sock.getsockname()[1]
+    from contextlib import closing
 
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("", 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        port = s.getsockname()[1]
+        return port
 
 @pytest.fixture(scope="session")
 def grpc_server_port():
@@ -159,7 +165,7 @@ def grpc_server(
         health_check_request = health_pb2.HealthCheckRequest()
         stub.Check(health_check_request)
 
-    wait_until(health_check, timeout=30, pause=0.5)
+    wait_until(health_check, timeout=WAIT_TIME_OUT, pause=0.5)
 
     yield grpc_server
 
@@ -315,7 +321,7 @@ def http_server(caikit_nlp_runtime, http_config, mock_text_generation):
         assert response.status_code == 200
         assert response.text == "OK"
 
-    wait_until(health_check, timeout=30, pause=0.5)
+    wait_until(health_check, timeout=WAIT_TIME_OUT, pause=0.5)
 
     yield http_server
 
