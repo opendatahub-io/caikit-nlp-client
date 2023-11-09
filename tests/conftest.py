@@ -60,6 +60,15 @@ def model_name():
     return available_models[0]
 
 
+@pytest.fixture(autouse=True)
+def insecure(insecure_value):
+    yield insecure_value
+
+
+@pytest.fixture(autouse=True)
+def insecure(insecure_value):
+    yield insecure_value
+
 @pytest.fixture(scope="session")
 def caikit_nlp_runtime(grpc_server_port, http_server_port):
     models_directory = str(Path(__file__).parent / "tiny_models")
