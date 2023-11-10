@@ -2,6 +2,7 @@ import os
 import socket
 import time
 from collections.abc import Iterable
+from enum import Enum
 from pathlib import Path
 from typing import Callable, TypeVar
 
@@ -55,14 +56,23 @@ def model_name():
     return available_models[0]
 
 
-# TODO: allow for parametrization for insecure, tls and mtls
-@pytest.fixture(autouse=True, scope="session", params=[True, False])
-def insecure(request):
+class ConnectionType(Enum):
+    INSECURE = 1
+    TLS = 2
+    MTLS = 3
+
+
+@pytest.fixture(
+    autouse=True,
+    scope="session",
+    params=[ConnectionType.INSECURE, ConnectionType.TLS, ConnectionType.MTLS],
+)
+def connection_type(request) -> ConnectionType:
     yield request.param
 
 
 @pytest.fixture(scope="session")
-def caikit_nlp_runtime(grpc_server_port, http_server_port, insecure):
+def caikit_nlp_runtime(grpc_server_port, http_server_port, connection_type):
     models_directory = str(Path(__file__).parent / "tiny_models")
 
     tgis_backend_config = [
@@ -90,12 +100,22 @@ def caikit_nlp_runtime(grpc_server_port, http_server_port, insecure):
         },
         "log": {"formatter": "pretty"},
     }
-    if not insecure:
+    if connection_type is ConnectionType.TLS:
         config["runtime"]["tls"] = {
             "server": {
                 "key": SERVER_KEY_FILE,
                 "cert": SERVER_CERT_FILE,
             }
+        }
+    if connection_type is ConnectionType.MTLS:
+        config["runtime"]["tls"] = {
+            "server": {
+                "key": SERVER_KEY_FILE,
+                "cert": SERVER_CERT_FILE,
+            },
+            "client": {
+                "cert": CLIENT_CERT_FILE,
+            },
         }
 
     caikit.config.configure(config_dict=config)
@@ -123,25 +143,32 @@ def http_server_port():
     return get_random_port()
 
 
-def channel_factory(host: str, port: int, insecure: bool):
-    config = GrpcChannelConfig(host=host, port=port, insecure=insecure)
-    if insecure:
-        return make_channel(config)
-    config.ca_cert = load_secret(CA_CERT_FILE)
-    config.client_key = load_secret(CLIENT_KEY_FILE)
-    config.client_cert = load_secret(CLIENT_CERT_FILE)
+def channel_factory(host: str, port: int, connection_type: ConnectionType):
+    if connection_type is ConnectionType.INSECURE:
+        config = GrpcChannelConfig(host=host, port=port)
+    elif connection_type is ConnectionType.MTLS:
+        config = GrpcChannelConfig(host=host, port=port, mtls=True)
+        config.client_key = load_secret(CLIENT_KEY_FILE)
+        config.client_cert = load_secret(CLIENT_CERT_FILE)
+        config.server_cert = load_secret(SERVER_CERT_FILE)
+    else:
+        config = GrpcChannelConfig(host=host, port=port, tls=True)
+        config.ca_cert = load_secret(CA_CERT_FILE)
+        config.client_key = load_secret(CLIENT_KEY_FILE)
+        config.client_cert = load_secret(CLIENT_CERT_FILE)
+
     return make_channel(config)
 
 
 @pytest.fixture(scope="session")
-def channel(grpc_server_port, grpc_server, insecure: bool):
+def channel(grpc_server_port, grpc_server, connection_type: bool):
     """Returns returns a grpc client connected to a locally running server"""
-    return channel_factory("localhost", grpc_server_port, insecure)
+    return channel_factory("localhost", grpc_server_port, connection_type)
 
 
 @pytest.fixture(scope="session")
 def grpc_server(
-    caikit_nlp_runtime, grpc_server_port, mock_text_generation, insecure: bool
+    caikit_nlp_runtime, grpc_server_port, mock_text_generation, connection_type: bool
 ):
     from caikit.runtime.grpc_server import RuntimeGRPCServer
 
@@ -149,7 +176,7 @@ def grpc_server(
     grpc_server.start(blocking=False)
 
     def health_check():
-        channel = channel_factory("localhost", grpc_server_port, insecure)
+        channel = channel_factory("localhost", grpc_server_port, connection_type)
         stub = health_pb2_grpc.HealthStub(channel)
         health_check_request = health_pb2.HealthCheckRequest()
         stub.Check(health_check_request)
@@ -162,20 +189,26 @@ def grpc_server(
 
 
 @pytest.fixture(scope="session")
-def http_config(caikit_nlp_runtime, insecure: bool):
+def http_config(caikit_nlp_runtime, connection_type):
     http_config = HTTPConfig(
         host="localhost",
         port=caikit.config.get_config().runtime.http.port,
     )
-    if insecure:
+    if connection_type is ConnectionType.INSECURE:
         return http_config
 
-    http_config.mtls = True
-    http_config.client_crt_path = CLIENT_CERT_FILE
-    http_config.client_key_path = CLIENT_KEY_FILE
-    http_config.ca_crt_path = CA_CERT_FILE
+    elif connection_type is ConnectionType.TLS:
+        http_config.tls = True
+        http_config.ca_crt_path = CA_CERT_FILE
+        return http_config
 
-    return http_config
+    else:  # connection_type is ConnectionType.MTLS
+        http_config.mtls = True
+        http_config.client_crt_path = CLIENT_CERT_FILE
+        http_config.client_key_path = CLIENT_KEY_FILE
+        http_config.server_crt_path = SERVER_CERT_FILE
+        http_config.ca_crt_path = CA_CERT_FILE
+        return http_config
 
 
 @pytest.fixture(scope="session")
@@ -289,18 +322,23 @@ def mock_text_generation(
 
 
 @pytest.fixture(scope="session")
-def http_server(caikit_nlp_runtime, http_config, mock_text_generation, insecure):
+def http_server(caikit_nlp_runtime, http_config, mock_text_generation, connection_type):
     from caikit.runtime.http_server import RuntimeHTTPServer
 
     http_server = RuntimeHTTPServer()
     http_server.start(blocking=False)
 
     def health_check():
-        if insecure:
+        if connection_type is ConnectionType.INSECURE:
             response = requests.get(
                 f"http://{http_config.host}:{http_config.port}/health",
             )
-        else:
+        elif connection_type is ConnectionType.TLS:
+            response = requests.get(
+                f"https://{http_config.host}:{http_config.port}/health",
+                verify=http_config.ca_crt_path,
+            )
+        else:  # connection_type is ConnectionType.MTLS
             response = requests.get(
                 f"https://{http_config.host}:{http_config.port}/health",
                 verify=http_config.ca_crt_path,

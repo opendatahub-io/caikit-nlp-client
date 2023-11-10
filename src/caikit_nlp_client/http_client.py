@@ -16,6 +16,7 @@ class HTTPConfig:
     client_key_path: Optional[str] = None
     client_crt_path: Optional[str] = None
     ca_crt_path: Optional[str] = None
+    server_crt_path: Optional[str] = None
 
     def __post_init__(self):
         if self.mtls and not self.client_key_path:
