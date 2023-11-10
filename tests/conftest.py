@@ -19,16 +19,7 @@ CLIENT_KEY_FILE = str(Path(__file__).parent / "resources/client-key.pem")
 CLIENT_CERT_FILE = str(Path(__file__).parent / "resources/client.pem")
 SERVER_KEY_FILE = str(Path(__file__).parent / "resources/server-key.pem")
 SERVER_CERT_FILE = str(Path(__file__).parent / "resources/server.pem")
-
 WAIT_TIME_OUT = 10
-
-WAIT_TIME_OUT = 10
-
-CA_CERT_FILE = str(Path(__file__).parent / "resources/ca.pem")
-CLIENT_KEY_FILE = str(Path(__file__).parent / "resources/client-key.pem")
-CLIENT_CERT_FILE = str(Path(__file__).parent / "resources/client.pem")
-SERVER_KEY_FILE = str(Path(__file__).parent / "resources/server-key.pem")
-SERVER_CERT_FILE = str(Path(__file__).parent / "resources/server.pem")
 
 
 @pytest.fixture(scope="session")
