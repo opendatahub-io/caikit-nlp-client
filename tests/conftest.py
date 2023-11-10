@@ -74,6 +74,7 @@ def caikit_nlp_runtime(grpc_server_port, http_server_port, insecure):
     config = {
         "merge_strategy": "merge",
         "runtime": {
+            "metrics": {"enabled": False},
             "local_models_dir": models_directory,
             "library": "caikit_nlp",
             "lazy_load_local_models": True,
