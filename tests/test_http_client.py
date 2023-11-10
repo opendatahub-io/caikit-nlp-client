@@ -1,5 +1,6 @@
 import pytest
 from caikit_nlp_client.http_client import HttpClient
+from requests.exceptions import SSLError
 
 
 @pytest.fixture
@@ -55,3 +56,26 @@ def test_generate_text_stream_with_optional_args(
     assert result == [
         stream_part.generated_text for stream_part in generated_text_stream_result
     ]
+
+
+@pytest.mark.xfail(reason="tls only is not implemented", strict=True)
+@pytest.mark.parametrize("insecure", [False], indirect=True)
+def test_tls_enabled(
+    http_client,
+    http_config,
+    model_name,
+    http_server,
+    monkeysession,
+    ca_cert_file,
+    insecure,
+):
+    assert http_config.tls, "TLS should be enabled for this test"
+
+    with pytest.raises(SSLError, match="*CERTIFICATE_VERIFY_FAILED*"):
+        assert http_client.generate_text(model_name, "dummy text")
+
+    # a valid certificate autority should validate the response with no extra args
+    with monkeysession.context() as monkeypatch:
+        monkeypatch.setenv("REQUESTS_CA_BUNDLE", ca_cert_file)
+
+        assert http_client.generate_text(model_name, "dummy text")
