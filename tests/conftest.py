@@ -55,11 +55,10 @@ def model_name():
     return available_models[0]
 
 
-# FIXME: allow for the code to generate fixtures with either insecure or secure
-# connections
-@pytest.fixture(scope="session")
-def insecure() -> bool:
-    return False
+# TODO: allow for parametrization for insecure, tls and mtls
+@pytest.fixture(autouse=True, scope="session", params=[True, False])
+def insecure(request):
+    yield request.param
 
 
 @pytest.fixture(scope="session")
@@ -171,7 +170,7 @@ def http_config(caikit_nlp_runtime, insecure: bool):
     if insecure:
         return http_config
 
-    http_config.tls = True
+    http_config.mtls = True
     http_config.client_crt_path = CLIENT_CERT_FILE
     http_config.client_key_path = CLIENT_KEY_FILE
     http_config.ca_crt_path = CA_CERT_FILE

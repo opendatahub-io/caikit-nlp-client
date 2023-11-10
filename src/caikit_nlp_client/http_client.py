@@ -42,7 +42,21 @@ class HTTPCaikitNlpClient:
 
         self.api_url = f"{base_url}{text_generation_endpoint}"
         self.stream_api_url = f"{base_url}{text_generation_stream_endpoint}"
-        self.config = http_config
+        self.mtls = http_config.mtls
+        self.tls = http_config.tls
+        if self.tls or self.mtls:
+            if http_config.ca_crt_path:
+                self.ca_crt_path = http_config.ca_crt_path
+            else:
+                raise ValueError(
+                    "The CA cert is required for TLS and mTlS configuration"
+                )
+        if self.mtls:
+            if http_config.client_crt_path and http_config.client_key_path:
+                self.client_crt_path = http_config.client_crt_path
+                self.client_key_path = http_config.client_key_path
+            else:
+                raise ValueError("Client key and certificates are required for mTLS")
 
     def generate_text(self, model_id: str, text: str, **kwargs) -> str:
         """Queries the `text-generation` endpoint for the given model_id
@@ -69,19 +83,18 @@ class HTTPCaikitNlpClient:
         try:
             log.info(f"Calling generate_text for '{model_id}'")
             json_input = create_json_request(model_id, text, **kwargs)
-            if self.config.tls:
-                assert self.config.client_key_path
-                assert self.config.client_crt_path
 
-                response = requests.post(
-                    self.api_url,
-                    json=json_input,
-                    timeout=10.0,
-                    verify=self.config.ca_crt_path,
-                    cert=(self.config.client_crt_path, self.config.client_key_path),
+            kwargs = {}
+            if self.tls or self.mtls:
+                kwargs["verify"] = self.ca_crt_path
+            if self.mtls:
+                kwargs["cert"] = (
+                    self.client_crt_path,
+                    self.client_key_path,
                 )
-            else:
-                response = requests.post(self.api_url, json=json_input, timeout=10.0)
+            response = requests.post(
+                self.api_url, json=json_input, timeout=10.0, **kwargs
+            )
             log.debug(f"Response: {response}")
             result: str = response.text
             log.info("Calling generate_text was successful")
@@ -115,22 +128,19 @@ class HTTPCaikitNlpClient:
         try:
             log.info(f"Calling generate_text_stream for '{model_id}'")
             json_input = create_json_request(model_id, text, **kwargs)
-            if self.config.tls:
-                assert self.config.client_key_path
-                assert self.config.client_crt_path
 
-                response = requests.post(
-                    self.stream_api_url,
-                    json=json_input,
-                    timeout=10.0,
-                    verify=self.config.ca_crt_path,
-                    cert=(self.config.client_crt_path, self.config.client_key_path),
-                )
-            else:
-                response = requests.post(
-                    self.stream_api_url, json=json_input, timeout=10.0
+            kwargs = {}
+            if self.tls or self.mtls:
+                kwargs["verify"] = self.ca_crt_path
+            if self.mtls:
+                kwargs["cert"] = (
+                    self.client_crt_path,
+                    self.client_key_path,
                 )
 
+            response = requests.post(
+                self.api_url, json=json_input, timeout=10.0, **kwargs
+            )
             log.debug(f"Response: {response}")
             result = [response.text]
             log.info("Calling generate_text_stream was successful")
