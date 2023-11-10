@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 
 
 @dataclass
-class HTTPConfig:
+class HttpConfig:
     host: str
     port: int
     tls: bool = False
@@ -25,14 +25,22 @@ class HTTPConfig:
             raise ValueError("mTLS and TLS are mutually exclusive")
 
 
-class HTTPCaikitNlpClient:
+class HttpClient:
     """HTTP client for a caikit nlp runtime server
 
     Args:
-        http_config (HTTPConfig): Configurations to make HTTP call.
+        http_config (HttpConfig): Configurations to make HTTP call.
     """
 
-    def __init__(self, http_config: HTTPConfig):
+    def __init__(self, http_config: HttpConfig):
+        """Client class for a Caikit NLP HTTP server
+
+        >>> client = HttpClient(HttpConfig(host="localhost", port=8080))
+        >>> generated_text = client.generate_text_stream(
+                "flan-t5-small-caikit",
+                "What is the boiling point of Nitrogen?"
+            )
+        """
         protocol = "https" if (http_config.mtls or http_config.tls) else "http"
         base_url = f"{protocol}://{http_config.host}:{http_config.port}"
         text_generation_endpoint = "/api/v1/task/text-generation"

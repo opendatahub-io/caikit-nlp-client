@@ -9,7 +9,7 @@ import caikit
 import pytest
 import requests
 from caikit_nlp_client.grpc_client_introspection import GrpcConfig, make_channel
-from caikit_nlp_client.http_client import HTTPConfig
+from caikit_nlp_client.http_client import HttpConfig
 from grpc_health.v1 import health_pb2, health_pb2_grpc
 
 _T = TypeVar("_T")
@@ -181,7 +181,7 @@ def grpc_server(
 
 @pytest.fixture(scope="session")
 def http_config(caikit_nlp_runtime, insecure: bool):
-    http_config = HTTPConfig(
+    http_config = HttpConfig(
         host="localhost",
         port=caikit.config.get_config().runtime.http.port,
     )

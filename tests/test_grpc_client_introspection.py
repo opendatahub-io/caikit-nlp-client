@@ -1,11 +1,11 @@
 import pytest
-from caikit_nlp_client.grpc_client_introspection import GrpcCaikitNlpClientIntrospection
+from caikit_nlp_client.grpc_client_introspection import GrpcClient
 
 
 @pytest.fixture
 def connected_client(grpc_server, grpc_config):
     """Returns returns a grpc client connected to a locally running server"""
-    return GrpcCaikitNlpClientIntrospection(grpc_config)
+    return GrpcClient(grpc_config)
 
 
 def test_generate_text(model_name, connected_client, generated_text_result):

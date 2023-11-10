@@ -1,11 +1,11 @@
 import pytest
-from caikit_nlp_client.http_client import HTTPCaikitNlpClient
+from caikit_nlp_client.http_client import HttpClient
 
 
 @pytest.fixture
-def http_client(http_config, http_server) -> HTTPCaikitNlpClient:
+def http_client(http_config, http_server) -> HttpClient:
     """Returns a grpc client connected to a locally running server"""
-    return HTTPCaikitNlpClient(http_config)
+    return HttpClient(http_config)
 
 
 def test_generate_text(http_client, model_name, generated_text_result):

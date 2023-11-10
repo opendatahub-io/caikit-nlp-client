@@ -49,7 +49,7 @@ def make_channel(config: GrpcConfig) -> grpc.Channel:
     )
 
 
-class GrpcCaikitNlpClientIntrospection:
+class GrpcClient:
     """GRPC client for a caikit nlp runtime server
 
     Args:
@@ -57,7 +57,14 @@ class GrpcCaikitNlpClientIntrospection:
     """
 
     def __init__(self, config: GrpcConfig) -> None:
-        """Returns a GrpcClient to the given GRPC server"""
+        """Client class for a Caikit NLP grpc server
+
+        >>> client = GrpcClient(GrpcConfig(host="localhost", port="8085"))
+        >>> generated_text = client.generate_text_stream(
+                "flan-t5-small-caikit",
+                "What is the boiling point of Nitrogen?"
+            )
+        """
 
         channel = make_channel(config)
         try:
