@@ -8,7 +8,7 @@ from typing import Callable, TypeVar
 import caikit
 import pytest
 import requests
-from caikit_nlp_client.grpc_channel import GrpcChannelConfig, make_channel
+from caikit_nlp_client.grpc_client_introspection import GrpcConfig, make_channel
 from caikit_nlp_client.http_client import HTTPConfig
 from grpc_health.v1 import health_pb2, health_pb2_grpc
 
@@ -125,13 +125,30 @@ def http_server_port():
 
 
 def channel_factory(host: str, port: int, insecure: bool):
-    config = GrpcChannelConfig(host=host, port=port, insecure=insecure)
+    config = GrpcConfig(host=host, port=port, insecure=insecure)
     if insecure:
         return make_channel(config)
+
     config.ca_cert = load_secret(CA_CERT_FILE)
     config.client_key = load_secret(CLIENT_KEY_FILE)
     config.client_cert = load_secret(CLIENT_CERT_FILE)
+
     return make_channel(config)
+
+
+@pytest.fixture(scope="session")
+def grpc_config(grpc_server_port, insecure):
+    secure_kwargs = {}
+    if not insecure:
+        secure_kwargs = {
+            "ca_cert": load_secret(CA_CERT_FILE),
+            "client_key": load_secret(CLIENT_KEY_FILE),
+            "client_cert": load_secret(CLIENT_CERT_FILE),
+        }
+
+    return GrpcConfig(
+        host="localhost", port=grpc_server_port, insecure=insecure, **secure_kwargs
+    )
 
 
 @pytest.fixture(scope="session")
