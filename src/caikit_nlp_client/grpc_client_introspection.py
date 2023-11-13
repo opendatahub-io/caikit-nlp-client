@@ -75,7 +75,7 @@ class GrpcClient:
                     "caikit.runtime.Nlp.TextGenerationTaskRequest"
                 )
             )
-            self.server_streaming_text_generation_task_request = GetMessageClass(
+            self.task_text_generation_request = GetMessageClass(
                 self.desc_pool.FindMessageTypeByName(
                     "caikit.runtime.Nlp.ServerStreamingTextGenerationTaskRequest"
                 )
@@ -85,14 +85,14 @@ class GrpcClient:
                     "caikit_data_model.nlp.GeneratedTextResult"
                 )
             )
-            self.text_generation_task_predict = self._channel.unary_unary(
+            self.task_predict = self._channel.unary_unary(
                 "/caikit.runtime.Nlp.NlpService/TextGenerationTaskPredict",
                 request_serializer=self.text_generation_task_request.SerializeToString,
                 response_deserializer=self.generated_text_result.FromString,
             )
-            self.server_streaming_text_generation_task_predict = self._channel.unary_stream(
+            self.streaming_task_predict = self._channel.unary_stream(
                 "/caikit.runtime.Nlp.NlpService/ServerStreamingTextGenerationTaskPredict",
-                request_serializer=self.server_streaming_text_generation_task_request.SerializeToString,
+                request_serializer=self.task_text_generation_request.SerializeToString,
                 response_deserializer=self.generated_text_result.FromString,
             )
         except Exception as exc:
@@ -127,9 +127,7 @@ class GrpcClient:
 
             request = self.text_generation_task_request()
             self.__populate_request(request, text, **kwargs)
-            response = self.text_generation_task_predict(
-                request=request, metadata=metadata
-            )
+            response = self.task_predict(request=request, metadata=metadata)
             log.debug(f"Response: {response}")
             result = response.generated_text
             log.info("Calling generate_text was successful")
@@ -165,12 +163,10 @@ class GrpcClient:
 
             metadata = [("mm-model-id", model_id)]
 
-            request = self.server_streaming_text_generation_task_request()
+            request = self.task_text_generation_request()
             self.__populate_request(request, text, **kwargs)
             result = []
-            for item in self.server_streaming_text_generation_task_predict(
-                metadata=metadata, request=request
-            ):
+            for item in self.streaming_task_predict(metadata=metadata, request=request):
                 result.append(item.generated_text)
             log.info(
                 f"Calling generate_text_stream was successful, '{len(result)}'"
