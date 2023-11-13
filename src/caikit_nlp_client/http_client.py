@@ -20,6 +20,10 @@ class HttpConfig:
     def __post_init__(self):
         if self.mtls and not self.client_key_path:
             raise ValueError("must provide a client_key_path with mTLS")
+        if self.mtls and not self.client_crt_path:
+            raise ValueError("must provide a client_crt_path with mTLS")
+        if self.mtls and not self.ca_crt_path:
+            raise ValueError("must provide a ca_crt_path with mTLS")
 
         if self.mtls and self.tls:
             raise ValueError("mTLS and TLS are mutually exclusive")
@@ -52,19 +56,20 @@ class HttpClient:
         self.stream_api_url = f"{base_url}{text_generation_stream_endpoint}"
         self.mtls = http_config.mtls
         self.tls = http_config.tls
-        if self.tls or self.mtls:
-            if http_config.ca_crt_path:
+        if self.mtls:
+            if (
+                http_config.client_crt_path
+                and http_config.client_key_path
+                and http_config.ca_crt_path
+            ):
+                self.client_crt_path = http_config.client_crt_path
+                self.client_key_path = http_config.client_key_path
                 self.ca_crt_path = http_config.ca_crt_path
             else:
                 raise ValueError(
-                    "The CA cert is required for TLS and mTlS configuration"
+                    "CA certificates, client key and certificates are required \
+                        for mTLS"
                 )
-        if self.mtls:
-            if http_config.client_crt_path and http_config.client_key_path:
-                self.client_crt_path = http_config.client_crt_path
-                self.client_key_path = http_config.client_key_path
-            else:
-                raise ValueError("Client key and certificates are required for mTLS")
 
     def generate_text(self, model_id: str, text: str, **kwargs) -> str:
         """Queries the `text-generation` endpoint for the given model_id
@@ -93,9 +98,8 @@ class HttpClient:
             json_input = create_json_request(model_id, text, **kwargs)
 
             kwargs = {}
-            if self.tls or self.mtls:
-                kwargs["verify"] = self.ca_crt_path
             if self.mtls:
+                kwargs["verify"] = self.ca_crt_path
                 kwargs["cert"] = (
                     self.client_crt_path,
                     self.client_key_path,
@@ -138,9 +142,8 @@ class HttpClient:
             json_input = create_json_request(model_id, text, **kwargs)
 
             kwargs = {}
-            if self.tls or self.mtls:
-                kwargs["verify"] = self.ca_crt_path
             if self.mtls:
+                kwargs["verify"] = self.ca_crt_path
                 kwargs["cert"] = (
                     self.client_crt_path,
                     self.client_key_path,
