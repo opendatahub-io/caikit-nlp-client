@@ -66,9 +66,9 @@ class GrpcClient:
             )
         """
 
-        channel = make_channel(config)
+        self._channel = make_channel(config)
         try:
-            self.reflection_db = ProtoReflectionDescriptorDatabase(channel)
+            self.reflection_db = ProtoReflectionDescriptorDatabase(self._channel)
             self.desc_pool = DescriptorPool(self.reflection_db)
             self.text_generation_task_request = GetMessageClass(
                 self.desc_pool.FindMessageTypeByName(
@@ -85,12 +85,12 @@ class GrpcClient:
                     "caikit_data_model.nlp.GeneratedTextResult"
                 )
             )
-            self.text_generation_task_predict = channel.unary_unary(
+            self.text_generation_task_predict = self._channel.unary_unary(
                 "/caikit.runtime.Nlp.NlpService/TextGenerationTaskPredict",
                 request_serializer=self.text_generation_task_request.SerializeToString,
                 response_deserializer=self.generated_text_result.FromString,
             )
-            self.server_streaming_text_generation_task_predict = channel.unary_stream(
+            self.server_streaming_text_generation_task_predict = self._channel.unary_stream(
                 "/caikit.runtime.Nlp.NlpService/ServerStreamingTextGenerationTaskPredict",
                 request_serializer=self.server_streaming_text_generation_task_request.SerializeToString,
                 response_deserializer=self.generated_text_result.FromString,
@@ -189,3 +189,7 @@ class GrpcClient:
             request.max_new_tokens = kwargs.get("max_new_tokens")
         if "min_new_tokens" in kwargs:
             request.min_new_tokens = kwargs.get("min_new_tokens")
+
+    def __del__(self):
+        if hasattr(self, "_channel") and self._channel:
+            self._channel.close()
