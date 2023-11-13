@@ -8,7 +8,7 @@ from typing import Callable, TypeVar
 import caikit
 import pytest
 import requests
-from caikit_nlp_client.grpc_client_introspection import GrpcConfig, make_channel
+from caikit_nlp_client.grpc_client import GrpcConfig, make_channel
 from caikit_nlp_client.http_client import HttpConfig
 from grpc_health.v1 import health_pb2, health_pb2_grpc
 
