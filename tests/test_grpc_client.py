@@ -1,5 +1,5 @@
 import pytest
-from caikit_nlp_client.grpc_client_introspection import GrpcClient
+from caikit_nlp_client.grpc_client import GrpcClient
 
 
 @pytest.fixture
