@@ -1,6 +1,7 @@
 import socket
 import time
 from collections.abc import Iterable
+from enum import Enum
 from pathlib import Path
 from typing import Callable, Optional, TypeVar
 
@@ -52,9 +53,18 @@ def model_name():
     return available_models[0]
 
 
-# TODO: allow for parametrization for insecure, tls and mtls
-@pytest.fixture(autouse=True, scope="session", params=[True, False])
-def insecure(request):
+class ConnectionType(Enum):
+    INSECURE = 1
+    TLS = 2
+    MTLS = 3
+
+
+@pytest.fixture(
+    autouse=True,
+    scope="session",
+    params=[ConnectionType.INSECURE, ConnectionType.TLS, ConnectionType.MTLS],
+)
+def connection_type(request):
     yield request.param
 
 
@@ -62,9 +72,10 @@ def insecure(request):
 def caikit_nlp_runtime(
     grpc_server_port,
     http_server_port,
-    insecure,
+    connection_type,
     server_key_file,
     server_cert_file,
+    ca_cert_file,
 ):
     models_directory = str(Path(__file__).parent / "tiny_models")
 
@@ -82,7 +93,11 @@ def caikit_nlp_runtime(
             "library": "caikit_nlp",
             "lazy_load_local_models": True,
             "grpc": {"enabled": True, "port": grpc_server_port},
-            "http": {"enabled": True, "port": http_server_port},
+            "http": {
+                "enabled": True,
+                "port": http_server_port,
+                "server_shutdown_grace_period_seconds": 2,
+            },
         },
         "model_management": {
             "initializers": {
@@ -94,12 +109,23 @@ def caikit_nlp_runtime(
         },
         "log": {"formatter": "pretty"},
     }
-    if not insecure:
+    if connection_type is ConnectionType.TLS:
         config["runtime"]["tls"] = {
             "server": {
                 "key": server_key_file,
                 "cert": server_cert_file,
             }
+        }
+
+    if connection_type is ConnectionType.MTLS:
+        config["runtime"]["tls"] = {
+            "server": {
+                "key": server_key_file,
+                "cert": server_cert_file,
+            },
+            "client": {
+                "cert": ca_cert_file,
+            },
         }
 
     caikit.config.configure(config_dict=config)
@@ -130,52 +156,81 @@ def http_server_port():
 def channel_factory(
     host: str,
     port: int,
-    insecure: bool,
+    connection_type: ConnectionType,
     ca_cert: Optional[bytes] = None,
     client_key: Optional[bytes] = None,
     client_cert: Optional[bytes] = None,
+    server_cert: Optional[bytes] = None,
 ):
-    config = GrpcConfig(host=host, port=port, insecure=insecure)
-    if insecure:
-        return make_channel(config)
+    if connection_type is ConnectionType.INSECURE:
+        config = GrpcConfig(host=host, port=port)
+    elif connection_type is ConnectionType.MTLS:
+        config = GrpcConfig(
+            host=host,
+            port=port,
+            mtls=True,
+            client_key=client_key,
+            client_cert=client_cert,
+            server_cert=server_cert,
+        )
+    else:
+        config = GrpcConfig(
+            host=host,
+            port=port,
+            tls=True,
+            ca_cert=ca_cert,
+            client_key=client_key,
+            client_cert=client_cert,
+        )
 
-    config.ca_cert = ca_cert
-    config.client_key = client_key
-    config.client_cert = client_cert
     return make_channel(config)
 
 
 @pytest.fixture(scope="session")
-def grpc_config(grpc_server_port, insecure, ca_cert, client_key, client_cert):
-    secure_kwargs = {}
-    if not insecure:
-        secure_kwargs = {
-            "ca_cert": ca_cert,
-            "client_key": client_key,
-            "client_cert": client_cert,
-        }
+def grpc_config(
+    grpc_server_port, connection_type, ca_cert, client_key, client_cert, server_cert
+):
+    if connection_type is ConnectionType.INSECURE:
+        return GrpcConfig(host="localhost", port=grpc_server_port)
 
-    return GrpcConfig(
-        host="localhost", port=grpc_server_port, insecure=insecure, **secure_kwargs
-    )
+    if connection_type is ConnectionType.TLS:
+        return GrpcConfig(
+            host="localhost", port=grpc_server_port, tls=True, ca_cert=ca_cert
+        )
+
+    if connection_type is ConnectionType.MTLS:
+        return GrpcConfig(
+            host="localhost",
+            port=grpc_server_port,
+            mtls=True,
+            client_cert=client_cert,
+            client_key=client_key,
+            server_cert=server_cert,
+            ca_cert=ca_cert,
+        )
+
+    raise ValueError(f"invalid {connection_type=}")
 
 
 @pytest.fixture(scope="session")
 def channel(
     grpc_server_port,
     grpc_server,
-    insecure: bool,
+    connection_type,
     ca_cert,
     client_key,
     client_cert,
+    server_cert,
 ):
+    """Returns returns a grpc client connected to a locally running server"""
     return channel_factory(
         "localhost",
         grpc_server_port,
-        insecure,
+        connection_type,
         ca_cert,
         client_key,
         client_cert,
+        server_cert,
     )
 
 
@@ -184,10 +239,11 @@ def grpc_server(
     caikit_nlp_runtime,
     grpc_server_port,
     mock_text_generation,
-    insecure: bool,
+    connection_type,
     ca_cert,
     client_key,
     client_cert,
+    server_cert,
 ):
     from caikit.runtime.grpc_server import RuntimeGRPCServer
 
@@ -195,18 +251,25 @@ def grpc_server(
     grpc_server.start(blocking=False)
 
     def health_check():
-        extra_args = (
-            ()
-            if insecure
-            else (
-                ca_cert,
-                client_key,
-                client_cert,
-            )
+        if connection_type is ConnectionType.INSECURE:
+            kwargs = {}
+        elif connection_type is ConnectionType.TLS:
+            kwargs = {
+                "ca_cert": ca_cert,
+            }
+        elif connection_type is ConnectionType.MTLS:
+            kwargs = {
+                "server_cert": server_cert,
+                "client_cert": client_cert,
+                "client_key": client_key,
+                "ca_cert": ca_cert,
+            }
+        else:
+            raise ValueError(f"Unknown {connection_type=}")
+
+        channel = channel_factory(
+            "localhost", grpc_server_port, connection_type, **kwargs
         )
-
-        channel = channel_factory("localhost", grpc_server_port, insecure, *extra_args)
-
         stub = health_pb2_grpc.HealthStub(channel)
         health_check_request = health_pb2.HealthCheckRequest()
         stub.Check(health_check_request)
@@ -220,21 +283,34 @@ def grpc_server(
 
 @pytest.fixture(scope="session")
 def http_config(
-    caikit_nlp_runtime, insecure: bool, client_cert_file, client_key_file, ca_cert_file
+    caikit_nlp_runtime,
+    connection_type,
+    client_cert_file,
+    client_key_file,
+    ca_cert_file,
+    server_cert_file,
 ):
     http_config = HttpConfig(
         host="localhost",
         port=caikit.config.get_config().runtime.http.port,
     )
-    if insecure:
+    if connection_type is ConnectionType.INSECURE:
         return http_config
 
-    http_config.mtls = True
-    http_config.client_crt_path = client_cert_file
-    http_config.client_key_path = client_key_file
-    http_config.ca_crt_path = ca_cert_file
+    if connection_type is ConnectionType.TLS:
+        http_config.tls = True
+        http_config.ca_cert_file = ca_cert_file
+        return http_config
 
-    return http_config
+    if connection_type is ConnectionType.MTLS:
+        http_config.mtls = True
+        http_config.client_crt_path = client_cert_file
+        http_config.client_key_path = client_key_file
+        http_config.ca_crt_path = ca_cert_file
+
+        return http_config
+
+    raise ValueError(f"invalid {connection_type=}")
 
 
 @pytest.fixture(scope="session")
@@ -348,23 +424,38 @@ def mock_text_generation(
 
 
 @pytest.fixture(scope="session")
-def http_server(caikit_nlp_runtime, http_config, mock_text_generation, insecure):
+def http_server(
+    caikit_nlp_runtime,
+    http_config,
+    mock_text_generation,
+    connection_type,
+    ca_cert_file,
+    client_cert_file,
+    client_key_file,
+):
     from caikit.runtime.http_server import RuntimeHTTPServer
 
     http_server = RuntimeHTTPServer()
     http_server.start(blocking=False)
 
     def health_check():
-        if insecure:
-            response = requests.get(
-                f"http://{http_config.host}:{http_config.port}/health",
-            )
+        if connection_type is ConnectionType.INSECURE:
+            scheme = "http"
+            kwargs = {}
+        elif connection_type is ConnectionType.TLS:
+            scheme = "https"
+            kwargs = {"verify": ca_cert_file}
+        elif connection_type is ConnectionType.MTLS:
+            scheme = "https"
+            kwargs = {
+                "verify": ca_cert_file,
+                "cert": (client_cert_file, client_key_file),
+            }
         else:
-            response = requests.get(
-                f"https://{http_config.host}:{http_config.port}/health",
-                verify=http_config.ca_crt_path,
-                cert=(http_config.client_crt_path, http_config.client_key_path),
-            )
+            raise ValueError(f"Invalid {connection_type=}")
+        response = requests.get(
+            f"{scheme}://{http_config.host}:{http_config.port}/health", **kwargs
+        )
 
         assert response.status_code == 200
         assert response.text == "OK"
