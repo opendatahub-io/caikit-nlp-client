@@ -182,7 +182,6 @@ def channel_factory(
             client_key=client_key,
             client_cert=client_cert,
         )
-
     return make_channel(config)
 
 
@@ -297,17 +296,14 @@ def http_config(
     if connection_type is ConnectionType.INSECURE:
         return http_config
 
-    if connection_type is ConnectionType.TLS:
+    elif connection_type is ConnectionType.TLS:
         http_config.tls = True
-        http_config.ca_cert_file = ca_cert_file
         return http_config
-
-    if connection_type is ConnectionType.MTLS:
+    else:
         http_config.mtls = True
         http_config.client_crt_path = client_cert_file
         http_config.client_key_path = client_key_file
         http_config.ca_crt_path = ca_cert_file
-
         return http_config
 
     raise ValueError(f"invalid {connection_type=}")
@@ -456,7 +452,6 @@ def http_server(
         response = requests.get(
             f"{scheme}://{http_config.host}:{http_config.port}/health", **kwargs
         )
-
         assert response.status_code == 200
         assert response.text == "OK"
 
