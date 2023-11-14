@@ -1,45 +1,19 @@
-import socket
-import time
 from collections.abc import Iterable
-from enum import Enum
 from pathlib import Path
-from typing import Callable, Optional, TypeVar
 
 import caikit
-import grpc
 import pytest
-import requests
-from caikit_nlp_client.grpc_client import GrpcClient
-from caikit_nlp_client.http_client import HttpConfig
-from grpc_health.v1 import health_pb2, health_pb2_grpc
 
-from .tls_fixtures import *  # noqa: F403
-
-_T = TypeVar("_T")
-
-
-WAIT_TIME_OUT = 10
+from .fixtures.grpc import grpc_client, grpc_server, grpc_server_port  # noqa: F401
+from .fixtures.http import http_config, http_server, http_server_port  # noqa: F401
+from .fixtures.tls import *  # noqa: F403
+from .fixtures.utils import ConnectionType
 
 
 @pytest.fixture(scope="session")
 def monkeysession():
     with pytest.MonkeyPatch.context() as mp:
         yield mp
-
-
-def wait_until(pred: Callable[..., _T], timeout: float, pause: float = 0.1) -> _T:
-    start = time.perf_counter()
-    exc = None
-    while (time.perf_counter() - start) < timeout:
-        try:
-            value = pred()
-        except Exception as e:  # pylint: disable=broad-except
-            exc = e
-        else:
-            return value
-        time.sleep(pause)
-
-    raise TimeoutError("timed out waiting") from exc
 
 
 @pytest.fixture
@@ -54,12 +28,6 @@ def model_name():
     return available_models[0]
 
 
-class ConnectionType(Enum):
-    INSECURE = 1
-    TLS = 2
-    MTLS = 3
-
-
 @pytest.fixture(
     autouse=True,
     scope="session",
@@ -71,8 +39,8 @@ def connection_type(request):
 
 @pytest.fixture(scope="session")
 def caikit_nlp_runtime(
-    grpc_server_port,
-    http_server_port,
+    grpc_server_port,  # noqa: F811
+    http_server_port,  # noqa: F811
     connection_type,
     server_key_file,
     server_cert_file,
@@ -130,150 +98,6 @@ def caikit_nlp_runtime(
         }
 
     caikit.config.configure(config_dict=config)
-
-
-def get_random_port():
-    from contextlib import closing
-
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(("", 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        port = s.getsockname()[1]
-        return port
-
-
-@pytest.fixture(scope="session")
-def grpc_server_port():
-    """default port for caikit grpc runtime"""
-    return get_random_port()
-
-
-@pytest.fixture(scope="session")
-def http_server_port():
-    """default port for caikit grpc runtime"""
-    return get_random_port()
-
-
-def channel_factory(
-    host: str,
-    port: int,
-    connection_type: ConnectionType,
-    ca_cert: Optional[bytes] = None,
-    client_key: Optional[bytes] = None,
-    client_cert: Optional[bytes] = None,
-    server_cert: Optional[bytes] = None,
-) -> grpc.Channel:
-    connection = f"{host}:{port}"
-    if connection_type is ConnectionType.INSECURE:
-        return grpc.insecure_channel(connection)
-    if connection_type is ConnectionType.TLS:
-        return grpc.secure_channel(
-            connection,
-            grpc.ssl_channel_credentials(ca_cert),
-        )
-    if connection_type is ConnectionType.MTLS:
-        return grpc.secure_channel(
-            connection,
-            grpc.ssl_channel_credentials(server_cert, client_key, client_cert),
-        )
-
-
-@pytest.fixture(scope="session")
-def grpc_client(
-    grpc_server_port, connection_type, ca_cert, client_key, client_cert, server_cert
-) -> GrpcClient:
-    if connection_type is ConnectionType.INSECURE:
-        return GrpcClient("localhost", grpc_server_port)
-
-    if connection_type is ConnectionType.TLS:
-        return GrpcClient("localhost", grpc_server_port, ca_cert=ca_cert)
-
-    if connection_type is ConnectionType.MTLS:
-        return GrpcClient(
-            "localhost",
-            grpc_server_port,
-            server_cert=server_cert,
-            client_key=client_key,
-            client_cert=client_cert,
-        )
-
-    raise ValueError(f"invalid {connection_type=}")
-
-
-@pytest.fixture(scope="session")
-def grpc_server(
-    caikit_nlp_runtime,
-    grpc_server_port,
-    mock_text_generation,
-    connection_type,
-    ca_cert,
-    client_key,
-    client_cert,
-    server_cert,
-):
-    from caikit.runtime.grpc_server import RuntimeGRPCServer
-
-    grpc_server = RuntimeGRPCServer()
-    grpc_server.start(blocking=False)
-
-    def health_check():
-        if connection_type is ConnectionType.INSECURE:
-            kwargs = {}
-        elif connection_type is ConnectionType.TLS:
-            kwargs = {
-                "ca_cert": ca_cert,
-            }
-        elif connection_type is ConnectionType.MTLS:
-            kwargs = {
-                "server_cert": server_cert,
-                "client_cert": client_cert,
-                "client_key": client_key,
-                "ca_cert": ca_cert,
-            }
-        else:
-            raise ValueError(f"Unknown {connection_type=}")
-
-        channel = channel_factory(
-            "localhost", grpc_server_port, connection_type, **kwargs
-        )
-        stub = health_pb2_grpc.HealthStub(channel)
-        health_check_request = health_pb2.HealthCheckRequest()
-        stub.Check(health_check_request)
-
-    wait_until(health_check, timeout=WAIT_TIME_OUT, pause=0.5)
-
-    yield grpc_server
-
-    grpc_server.stop()
-
-
-@pytest.fixture(scope="session")
-def http_config(
-    caikit_nlp_runtime,
-    connection_type,
-    client_cert_file,
-    client_key_file,
-    ca_cert_file,
-    server_cert_file,
-):
-    http_config = HttpConfig(
-        host="localhost",
-        port=caikit.config.get_config().runtime.http.port,
-    )
-    if connection_type is ConnectionType.INSECURE:
-        return http_config
-
-    elif connection_type is ConnectionType.TLS:
-        http_config.tls = True
-        return http_config
-    else:
-        http_config.mtls = True
-        http_config.client_crt_path = client_cert_file
-        http_config.client_key_path = client_key_file
-        http_config.ca_crt_path = ca_cert_file
-        return http_config
-
-    raise ValueError(f"invalid {connection_type=}")
 
 
 @pytest.fixture(scope="session")
@@ -384,46 +208,3 @@ def mock_text_generation(
     )
 
     yield
-
-
-@pytest.fixture(scope="session")
-def http_server(
-    caikit_nlp_runtime,
-    http_config,
-    mock_text_generation,
-    connection_type,
-    ca_cert_file,
-    client_cert_file,
-    client_key_file,
-):
-    from caikit.runtime.http_server import RuntimeHTTPServer
-
-    http_server = RuntimeHTTPServer()
-    http_server.start(blocking=False)
-
-    def health_check():
-        if connection_type is ConnectionType.INSECURE:
-            scheme = "http"
-            kwargs = {}
-        elif connection_type is ConnectionType.TLS:
-            scheme = "https"
-            kwargs = {"verify": ca_cert_file}
-        elif connection_type is ConnectionType.MTLS:
-            scheme = "https"
-            kwargs = {
-                "verify": ca_cert_file,
-                "cert": (client_cert_file, client_key_file),
-            }
-        else:
-            raise ValueError(f"Invalid {connection_type=}")
-        response = requests.get(
-            f"{scheme}://{http_config.host}:{http_config.port}/health", **kwargs
-        )
-        assert response.status_code == 200
-        assert response.text == "OK"
-
-    wait_until(health_check, timeout=WAIT_TIME_OUT, pause=0.5)
-
-    yield http_server
-
-    http_server.stop()
