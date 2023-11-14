@@ -33,7 +33,7 @@ def make_channel(config: GrpcConfig) -> grpc.Channel:
 
     connection = f"{config.host}:{config.port}"
 
-    if not config.tls and not config.mtls:
+    if not (config.tls or config.mtls):
         return grpc.insecure_channel(connection)
 
     if config.tls:
