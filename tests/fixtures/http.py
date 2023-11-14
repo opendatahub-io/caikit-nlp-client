@@ -1,4 +1,3 @@
-import caikit
 import pytest
 import requests
 from caikit_nlp_client.http_client import HttpConfig
@@ -7,24 +6,22 @@ from .utils import ConnectionType, get_random_port, wait_until
 
 
 @pytest.fixture(scope="session")
-def http_server_port():
-    """default port for caikit grpc runtime"""
+def http_server_thread_port():
+    """port for caikit http runtime thread"""
     return get_random_port()
 
 
 @pytest.fixture(scope="session")
 def http_config(
-    caikit_nlp_runtime,
+    http_server,
     connection_type,
     client_cert_file,
     client_key_file,
     ca_cert_file,
     server_cert_file,
 ):
-    http_config = HttpConfig(
-        host="localhost",
-        port=caikit.config.get_config().runtime.http.port,
-    )
+    http_config = HttpConfig(*http_server)
+
     if connection_type is ConnectionType.INSECURE:
         return http_config
 
@@ -42,20 +39,40 @@ def http_config(
 
 
 @pytest.fixture(scope="session")
+def http_server_thread(
+    caikit_nlp_runtime,
+    http_server_thread_port,
+    mock_text_generation,
+):
+    """spins a caikit http server in a thread for testing, returning host and port"""
+    from caikit.runtime.http_server import RuntimeHTTPServer
+
+    http_server = RuntimeHTTPServer()
+    http_server.start(blocking=False)
+
+    yield "localhost", http_server_thread_port
+
+    http_server.stop()
+
+
+@pytest.fixture(scope="session")
 def http_server(
     pytestconfig,
+    request: pytest.FixtureRequest,
     caikit_nlp_runtime,
-    http_config,
     mock_text_generation,
     connection_type,
     ca_cert_file,
     client_cert_file,
     client_key_file,
 ):
-    from caikit.runtime.http_server import RuntimeHTTPServer
+    if pytestconfig.option.real_caikit:
+        if connection_type is not ConnectionType.INSECURE:
+            pytest.skip(reason="not testing TLS with a docker caikit instance")
 
-    http_server = RuntimeHTTPServer()
-    http_server.start(blocking=False)
+        host, port = request.getfixturevalue("http_server_docker")
+    else:
+        host, port = request.getfixturevalue("http_server_thread")
 
     def health_check(host: str, port: int):
         if connection_type is ConnectionType.INSECURE:
@@ -77,10 +94,8 @@ def http_server(
         assert response.text == "OK"
 
     wait_until(
-        lambda: health_check(http_config.host, http_config.port),
+        lambda: health_check(host, port),
         pause=0.5,
     )
 
-    yield http_server
-
-    http_server.stop()
+    yield host, port

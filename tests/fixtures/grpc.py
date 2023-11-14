@@ -33,25 +33,29 @@ def channel_factory(
 
 
 @pytest.fixture(scope="session")
-def grpc_server_port():
-    """default port for caikit grpc runtime"""
+def grpc_server_thread_port():
+    """port for caikit grpc runtime thread"""
     return get_random_port()
 
 
 @pytest.fixture(scope="session")
 def grpc_client(
-    grpc_server_port, connection_type, ca_cert, client_key, client_cert, server_cert
+    grpc_server,
+    connection_type,
+    ca_cert,
+    client_key,
+    client_cert,
+    server_cert,
 ) -> GrpcClient:
     if connection_type is ConnectionType.INSECURE:
-        return GrpcClient("localhost", grpc_server_port)
+        return GrpcClient(*grpc_server)
 
     if connection_type is ConnectionType.TLS:
-        return GrpcClient("localhost", grpc_server_port, ca_cert=ca_cert)
+        return GrpcClient(*grpc_server, ca_cert=ca_cert)
 
     if connection_type is ConnectionType.MTLS:
         return GrpcClient(
-            "localhost",
-            grpc_server_port,
+            *grpc_server,
             server_cert=server_cert,
             client_key=client_key,
             client_cert=client_cert,
@@ -61,20 +65,38 @@ def grpc_client(
 
 
 @pytest.fixture(scope="session")
-def grpc_server(
+def grpc_server_thread(
     caikit_nlp_runtime,
-    grpc_server_port,
+    grpc_server_thread_port,
     mock_text_generation,
+):
+    """spins a caikit grpc server in a thread for testing, returning host and port"""
+    from caikit.runtime.grpc_server import RuntimeGRPCServer
+
+    grpc_server = RuntimeGRPCServer()
+    grpc_server.start(blocking=False)
+
+    yield "localhost", grpc_server_thread_port
+
+    grpc_server.stop()
+
+
+@pytest.fixture(scope="session")
+def grpc_server(
+    pytestconfig,
+    request: pytest.FixtureRequest,
     connection_type,
     ca_cert,
     client_key,
     client_cert,
     server_cert,
 ):
-    from caikit.runtime.grpc_server import RuntimeGRPCServer
-
-    grpc_server = RuntimeGRPCServer()
-    grpc_server.start(blocking=False)
+    if pytestconfig.option.real_caikit:
+        if connection_type is not ConnectionType.INSECURE:
+            pytest.skip(reason="not testing TLS with a docker caikit instance")
+        host, port = request.getfixturevalue("grpc_server_docker")
+    else:
+        host, port = request.getfixturevalue("grpc_server_thread")
 
     def health_check(host: str, port: int):
         if connection_type is ConnectionType.INSECURE:
@@ -98,12 +120,9 @@ def grpc_server(
         health_check_request = health_pb2.HealthCheckRequest()
         stub.Check(health_check_request)
 
-    host = "localhost"
     wait_until(
-        lambda: health_check(host, grpc_server_port),
+        lambda: health_check(host, port),
         pause=0.5,
     )
 
-    yield grpc_server
-
-    grpc_server.stop()
+    yield host, port
