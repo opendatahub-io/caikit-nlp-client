@@ -93,27 +93,22 @@ class HttpClient:
         """
         if model_id == "":
             raise ValueError("request must have a model id")
-        try:
-            log.info(f"Calling generate_text for '{model_id}'")
-            json_input = create_json_request(model_id, text, **kwargs)
 
-            kwargs = {}
-            if self.mtls:
-                kwargs["verify"] = self.ca_crt_path
-                kwargs["cert"] = (
-                    self.client_crt_path,
-                    self.client_key_path,
-                )
-            response = requests.post(
-                self.api_url, json=json_input, timeout=10.0, **kwargs
+        log.info(f"Calling generate_text for '{model_id}'")
+        json_input = create_json_request(model_id, text, **kwargs)
+
+        kwargs = {}
+        if self.mtls:
+            kwargs["verify"] = self.ca_crt_path
+            kwargs["cert"] = (
+                self.client_crt_path,
+                self.client_key_path,
             )
-            log.debug(f"Response: {response}")
-            result: str = response.text
-            log.info("Calling generate_text was successful")
-            return result
-        except Exception as exc:
-            log.exception(f"Caught exception {exc}, re-throwing")
-            raise exc
+        response = requests.post(self.api_url, json=json_input, timeout=10.0, **kwargs)
+        log.debug(f"Response: {response}")
+        result: str = response.text
+        log.info("Calling generate_text was successful")
+        return result
 
     def generate_text_stream(self, model_id: str, text: str, **kwargs) -> list[str]:
         """Queries the `text-generation` stream endpoint for the given model_id
@@ -137,28 +132,23 @@ class HttpClient:
         """
         if model_id == "":
             raise ValueError("request must have a model id")
-        try:
-            log.info(f"Calling generate_text_stream for '{model_id}'")
-            json_input = create_json_request(model_id, text, **kwargs)
 
-            kwargs = {}
-            if self.mtls:
-                kwargs["verify"] = self.ca_crt_path
-                kwargs["cert"] = (
-                    self.client_crt_path,
-                    self.client_key_path,
-                )
+        log.info(f"Calling generate_text_stream for '{model_id}'")
+        json_input = create_json_request(model_id, text, **kwargs)
 
-            response = requests.post(
-                self.api_url, json=json_input, timeout=10.0, **kwargs
+        kwargs = {}
+        if self.mtls:
+            kwargs["verify"] = self.ca_crt_path
+            kwargs["cert"] = (
+                self.client_crt_path,
+                self.client_key_path,
             )
-            log.debug(f"Response: {response}")
-            result = [response.text]
-            log.info("Calling generate_text_stream was successful")
-            return result
-        except Exception as exc:
-            log.exception(f"Caught exception {exc}, re-throwing")
-            raise exc
+
+        response = requests.post(self.api_url, json=json_input, timeout=10.0, **kwargs)
+        log.debug(f"Response: {response}")
+        result = [response.text]
+        log.info("Calling generate_text_stream was successful")
+        return result
 
 
 def create_json_request(model_id, text, **kwargs) -> dict[str, Any]:

@@ -3,9 +3,8 @@ import logging
 import grpc
 from google.protobuf.descriptor_pool import DescriptorPool
 from google.protobuf.message_factory import GetMessageClass
-from grpc_reflection.v1alpha.proto_reflection_descriptor_database import (
-    ProtoReflectionDescriptorDatabase,
-)
+from grpc_reflection.v1alpha.proto_reflection_descriptor_database import \
+    ProtoReflectionDescriptorDatabase
 
 log = logging.getLogger(__name__)
 
@@ -29,37 +28,33 @@ class GrpcClient:
         """
 
         self._channel = self.__make_channel(host, port, **kwarg)
-        try:
-            self.reflection_db = ProtoReflectionDescriptorDatabase(self._channel)
-            self.desc_pool = DescriptorPool(self.reflection_db)
-            self.text_generation_task_request = GetMessageClass(
-                self.desc_pool.FindMessageTypeByName(
-                    "caikit.runtime.Nlp.TextGenerationTaskRequest"
-                )
+        self.reflection_db = ProtoReflectionDescriptorDatabase(self._channel)
+        self.desc_pool = DescriptorPool(self.reflection_db)
+        self.text_generation_task_request = GetMessageClass(
+            self.desc_pool.FindMessageTypeByName(
+                "caikit.runtime.Nlp.TextGenerationTaskRequest"
             )
-            self.task_text_generation_request = GetMessageClass(
-                self.desc_pool.FindMessageTypeByName(
-                    "caikit.runtime.Nlp.ServerStreamingTextGenerationTaskRequest"
-                )
+        )
+        self.task_text_generation_request = GetMessageClass(
+            self.desc_pool.FindMessageTypeByName(
+                "caikit.runtime.Nlp.ServerStreamingTextGenerationTaskRequest"
             )
-            self.generated_text_result = GetMessageClass(
-                self.desc_pool.FindMessageTypeByName(
-                    "caikit_data_model.nlp.GeneratedTextResult"
-                )
+        )
+        self.generated_text_result = GetMessageClass(
+            self.desc_pool.FindMessageTypeByName(
+                "caikit_data_model.nlp.GeneratedTextResult"
             )
-            self.task_predict = self._channel.unary_unary(
-                "/caikit.runtime.Nlp.NlpService/TextGenerationTaskPredict",
-                request_serializer=self.text_generation_task_request.SerializeToString,
-                response_deserializer=self.generated_text_result.FromString,
-            )
-            self.streaming_task_predict = self._channel.unary_stream(
-                "/caikit.runtime.Nlp.NlpService/ServerStreamingTextGenerationTaskPredict",
-                request_serializer=self.task_text_generation_request.SerializeToString,
-                response_deserializer=self.generated_text_result.FromString,
-            )
-        except Exception as exc:
-            log.error(f"Caught exception {exc}, re-throwing")
-            raise exc
+        )
+        self.task_predict = self._channel.unary_unary(
+            "/caikit.runtime.Nlp.NlpService/TextGenerationTaskPredict",
+            request_serializer=self.text_generation_task_request.SerializeToString,
+            response_deserializer=self.generated_text_result.FromString,
+        )
+        self.streaming_task_predict = self._channel.unary_stream(
+            "/caikit.runtime.Nlp.NlpService/ServerStreamingTextGenerationTaskPredict",
+            request_serializer=self.task_text_generation_request.SerializeToString,
+            response_deserializer=self.generated_text_result.FromString,
+        )
 
     def generate_text(self, model_id: str, text: str, **kwargs) -> str:
         """Sends a generate text request to the server for the given model id
@@ -83,20 +78,17 @@ class GrpcClient:
         """
         if model_id == "":
             raise ValueError("request must have a model id")
-        try:
-            log.info(f"Calling generate_text for '{model_id}'")
-            metadata = [("mm-model-id", model_id)]
 
-            request = self.text_generation_task_request()
-            self.__populate_request(request, text, **kwargs)
-            response = self.task_predict(request=request, metadata=metadata)
-            log.debug(f"Response: {response}")
-            result = response.generated_text
-            log.info("Calling generate_text was successful")
-            return result
-        except Exception as exc:
-            log.error(f"Caught exception {exc}, re-throwing")
-            raise exc
+        log.info(f"Calling generate_text for '{model_id}'")
+        metadata = [("mm-model-id", model_id)]
+
+        request = self.text_generation_task_request()
+        self.__populate_request(request, text, **kwargs)
+        response = self.task_predict(request=request, metadata=metadata)
+        log.debug(f"Response: {response}")
+        result = response.generated_text
+        log.info("Calling generate_text was successful")
+        return result
 
     def generate_text_stream(self, model_id: str, text: str, **kwargs) -> list[str]:
         """Sends a generate text stream request to the server for the given model id
@@ -120,24 +112,21 @@ class GrpcClient:
         """
         if model_id == "":
             raise ValueError("request must have a model id")
-        try:
-            log.info(f"Calling generate_text_stream for '{model_id}'")
 
-            metadata = [("mm-model-id", model_id)]
+        log.info(f"Calling generate_text_stream for '{model_id}'")
 
-            request = self.task_text_generation_request()
-            self.__populate_request(request, text, **kwargs)
-            result = []
-            for item in self.streaming_task_predict(metadata=metadata, request=request):
-                result.append(item.generated_text)
-            log.info(
-                f"Calling generate_text_stream was successful, '{len(result)}'"
-                " items in result"
-            )
-            return result
-        except Exception as exc:
-            log.error(f"Caught exception {exc}, re-throwing")
-            raise exc
+        metadata = [("mm-model-id", model_id)]
+
+        request = self.task_text_generation_request()
+        self.__populate_request(request, text, **kwargs)
+        result = []
+        for item in self.streaming_task_predict(metadata=metadata, request=request):
+            result.append(item.generated_text)
+        log.info(
+            f"Calling generate_text_stream was successful, '{len(result)}'"
+            " items in result"
+        )
+        return result
 
     def __populate_request(self, request, text, **kwargs):
         request.text = text
