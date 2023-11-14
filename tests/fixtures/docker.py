@@ -24,7 +24,10 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope="session")
 def flan_t5_small_caikit(pytestconfig, monkeysession):
-    """Points to a downloaded model that can be used with caikit"""
+    """Points to a downloaded model that can be used with caikit.
+
+    This may be downloaded if not available
+    """
     model_dir = pytestconfig.rootdir / "tests/fixtures/resources/flan-t5-small-caikit"
 
     if not model_dir.isdir():
@@ -36,15 +39,22 @@ def flan_t5_small_caikit(pytestconfig, monkeysession):
 
         import caikit_nlp
 
-        caikit_nlp.text_generation.TextGeneration.bootstrap(
+        model = caikit_nlp.text_generation.TextGeneration.bootstrap(
             "google/flan-t5-small"
-        ).save(str(model_dir))
+        )
+        model.save(str(model_dir))
 
     return str(model_dir)
 
 
 @pytest.fixture(scope="session")
-def caikit_tgis_service(docker_ip, docker_services, flan_t5_small_caikit):
+def caikit_tgis_service(
+    # NOTE: order is important: we need to make sure that the model is available before
+    # requesting the `docker_services` fixture, which brings up the stack and mounts
+    # volumes.  If model is not available, the stack will not come up.
+    flan_t5_small_caikit,
+    docker_services,
+):
     """Spins up a caikit+tgis instance, returning a dict, grpc_port and http_port"""
 
     def is_up(url: str) -> False:

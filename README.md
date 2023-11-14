@@ -27,3 +27,10 @@ caikit+tgis stack, it is sufficient to run using the `--real-caikit` flag when r
 ```bash
 nox -s tests -- --real-caikit tests
 ```
+
+_Notes:_
+
+- The required images (`caikit-tgis-serving`, `text-generation-inference`), so it could take a while for tests to start while
+  compose is pulling the required images, it may seem like the tests are hanging.
+- This uses a real model ([google/flan-t5-small](https://huggingface.co/google/flan-t5-small)), which will be downloaded
+  to `tests/fixtures/resources/flan-t5-small-caikit` and is around 300MB in size.
