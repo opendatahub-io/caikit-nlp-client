@@ -58,28 +58,28 @@ def test_generate_text_with_no_model_id(http_client):
         http_client.generate_text("", "What does foobar mean?")
 
 
-@pytest.mark.skip(reason="stream is broken")
 def test_generate_text_stream(http_client, model_name, generated_text_stream_result):
-    result = http_client.generate_text_stream(
-        model_name, "What is the meaning of life?"
+    messages = list(
+        http_client.generate_text_stream(model_name, "What is the meaning of life?")
     )
-    assert result == [
+    assert len(messages) == 14
+
+    assert [message["generated_text"] for message in messages] == [
         stream_part.generated_text for stream_part in generated_text_stream_result
     ]
 
 
-@pytest.mark.skip(reason="stream is broken")
 def test_generate_text_stream_with_optional_args(
     http_client, model_name, generated_text_stream_result
 ):
-    result = http_client.generate_text_stream(
+    messages = http_client.generate_text_stream(
         model_name,
         "What is the meaning of life?",
         preserve_input_text=False,
         max_new_tokens=20,
         min_new_tokens=4,
     )
-    assert result == [
+    assert [message["generated_text"] for message in messages] == [
         stream_part.generated_text for stream_part in generated_text_stream_result
     ]
 

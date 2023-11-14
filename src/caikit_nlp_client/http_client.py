@@ -1,4 +1,6 @@
+import json
 import logging
+from collections.abc import Iterable
 from typing import Any
 
 import requests
@@ -85,7 +87,9 @@ class HttpClient:
         log.info("Calling generate_text was successful")
         return result
 
-    def generate_text_stream(self, model_id: str, text: str, **kwargs) -> list[str]:
+    def generate_text_stream(
+        self, model_id: str, text: str, **kwargs
+    ) -> Iterable[dict[str, Any]]:
         """Queries the `text-generation` stream endpoint for the given model_id
 
         Args:
@@ -103,7 +107,22 @@ class HttpClient:
             the text generation request
 
         Returns:
-            a list of generated text (token)
+            a list of messages generated from the server
+
+        Example:
+
+        >>> text = "What is 2+2?"
+        >>> chunks = []
+        >>> for message in http_client.generate_text_stream(
+        >>>     "flan-t5-small-caikit",
+        >>>     text,
+        >>> ):
+        >>>     chunk = message.generated_text
+        >>>     if message["details"]["finish_reason"] == "NOT_FINISHED":
+        >>>         print("Got chunk")
+        >>>         chunks.append(chunk)
+        >>>     print(f"final result: {''.join(chunks)}")
+        >>>     print(f"finish_reason: {message['details']['finish_reason']}")
         """
         if model_id == "":
             raise ValueError("request must have a model id")
@@ -118,11 +137,30 @@ class HttpClient:
                 self._client_key_path,
             )
 
-        response = requests.post(self._api_url, json=json_input, timeout=10.0, **kwargs)
-        log.debug(f"Response: {response}")
-        result = [response.text]
-        log.info("Calling generate_text_stream was successful")
-        return result
+        response = requests.post(
+            self._stream_api_url, json=json_input, timeout=10.0, **kwargs
+        )
+
+        buffer: list[bytes] = []
+        for line in response.iter_lines():
+            if line:
+                # each line will be in the format <message type>: <data>
+                # we don't care about the message type
+                buffer.append(line.split(b":", maxsplit=1)[1])
+                continue
+
+            try:
+                message = json.loads(b"".join(buffer))
+            except json.JSONDecodeError:
+                # message not over yet
+                continue
+
+            buffer.clear()
+            yield message
+
+        if buffer:
+            final_message = json.loads(b"".join(buffer))
+            yield final_message
 
     def _create_json_request(self, model_id, text, **kwargs) -> dict[str, Any]:
         json_input = {
