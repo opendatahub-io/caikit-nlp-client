@@ -21,3 +21,11 @@ text = client.generate_text(
 )
 print(text)
 # 'this is the generated text'
+
+
+# using a context manager (grpc only):
+# (makes sure that the underlying resources are cleaned)
+with GrpcClient("localhost", port=8085) as client:
+    text = client.generate_text(
+        "flan-t5-small-caikit", text, min_new_tokens=20, max_new_tokens=20
+    )
