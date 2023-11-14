@@ -9,7 +9,7 @@ def ca_cert_file():
 
 
 @pytest.fixture(scope="session")
-def ca_cert(ca_cert_file) -> bytes:
+def ca_cert(ca_cert_file):
     with open(ca_cert_file, "rb") as fh:
         return fh.read()
 
