@@ -104,5 +104,6 @@ module = [
     "grpc",
     "grpc_health.v1",
     "caikit.runtime.grpc_server",
-    "grpc_reflection.*"
+    "grpc_reflection.*",
+    "google._upb._message"
 ]

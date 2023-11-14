@@ -60,3 +60,8 @@ def test_generate_text_stream_with_optional_args(
         stream_part.generated_text for stream_part in generated_text_stream_result
     ]
     # TODO: also validate passing of parameters
+
+
+def test_request_invalid_kwarg(model_name, connected_client):
+    with pytest.raises(ValueError, match="Unsupported kwarg key='invalid_kwarg'"):
+        connected_client.generate_text(model_name, "dummy", invalid_kwarg=42)

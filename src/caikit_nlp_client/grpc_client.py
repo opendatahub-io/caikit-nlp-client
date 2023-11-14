@@ -1,10 +1,15 @@
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from google._upb._message import Message
 
 import grpc
 from google.protobuf.descriptor_pool import DescriptorPool
 from google.protobuf.message_factory import GetMessageClass
-from grpc_reflection.v1alpha.proto_reflection_descriptor_database import \
-    ProtoReflectionDescriptorDatabase
+from grpc_reflection.v1alpha.proto_reflection_descriptor_database import (
+    ProtoReflectionDescriptorDatabase,
+)
 
 log = logging.getLogger(__name__)
 
@@ -83,7 +88,7 @@ class GrpcClient:
         metadata = [("mm-model-id", model_id)]
 
         request = self._text_generation_task_request()
-        self.__populate_request(request, text, **kwargs)
+        self._populate_request(request, text, **kwargs)
         response = self._task_predict(request=request, metadata=metadata)
         log.debug(f"Response: {response}")
         result = response.generated_text
@@ -118,7 +123,7 @@ class GrpcClient:
         metadata = [("mm-model-id", model_id)]
 
         request = self._task_text_generation_request()
-        self.__populate_request(request, text, **kwargs)
+        self._populate_request(request, text, **kwargs)
         result = []
         for item in self._streaming_task_predict(metadata=metadata, request=request):
             result.append(item.generated_text)
@@ -128,14 +133,14 @@ class GrpcClient:
         )
         return result
 
-    def __populate_request(self, request, text, **kwargs):
+    def _populate_request(self, request: "Message", text: str, **kwargs):
+        """dynamically converts kwargs to request attributes."""
         request.text = text
-        if "preserve_input_text" in kwargs:
-            request.preserve_input_text = kwargs.get("preserve_input_text")
-        if "max_new_tokens" in kwargs:
-            request.max_new_tokens = kwargs.get("max_new_tokens")
-        if "min_new_tokens" in kwargs:
-            request.min_new_tokens = kwargs.get("min_new_tokens")
+        for key, value in kwargs.items():
+            try:
+                setattr(request, key, value)
+            except AttributeError as exc:
+                raise ValueError(f"Unsupported kwarg {key=}") from exc
 
     def __del__(self):
         if hasattr(self, "_channel") and self._channel:
