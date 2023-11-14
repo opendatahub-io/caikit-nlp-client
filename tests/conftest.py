@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import Callable, Optional, TypeVar
 
 import caikit
+import grpc
 import pytest
 import requests
-from caikit_nlp_client.grpc_client import GrpcConfig, make_channel
+from caikit_nlp_client.grpc_client import GrpcClient
 from caikit_nlp_client.http_client import HttpConfig
 from grpc_health.v1 import health_pb2, health_pb2_grpc
 
@@ -161,76 +162,42 @@ def channel_factory(
     client_key: Optional[bytes] = None,
     client_cert: Optional[bytes] = None,
     server_cert: Optional[bytes] = None,
-):
+) -> grpc.Channel:
+    connection = f"{host}:{port}"
     if connection_type is ConnectionType.INSECURE:
-        config = GrpcConfig(host=host, port=port)
-    elif connection_type is ConnectionType.MTLS:
-        config = GrpcConfig(
-            host=host,
-            port=port,
-            mtls=True,
-            client_key=client_key,
-            client_cert=client_cert,
-            server_cert=server_cert,
+        return grpc.insecure_channel(connection)
+    if connection_type is ConnectionType.TLS:
+        return grpc.secure_channel(
+            connection,
+            grpc.ssl_channel_credentials(ca_cert),
         )
-    else:
-        config = GrpcConfig(
-            host=host,
-            port=port,
-            tls=True,
-            ca_cert=ca_cert,
-            client_key=client_key,
-            client_cert=client_cert,
+    if connection_type is ConnectionType.MTLS:
+        return grpc.secure_channel(
+            connection,
+            grpc.ssl_channel_credentials(server_cert, client_key, client_cert),
         )
-    return make_channel(config)
 
 
 @pytest.fixture(scope="session")
-def grpc_config(
+def grpc_client(
     grpc_server_port, connection_type, ca_cert, client_key, client_cert, server_cert
-):
+) -> GrpcClient:
     if connection_type is ConnectionType.INSECURE:
-        return GrpcConfig(host="localhost", port=grpc_server_port)
+        return GrpcClient("localhost", grpc_server_port)
 
     if connection_type is ConnectionType.TLS:
-        return GrpcConfig(
-            host="localhost", port=grpc_server_port, tls=True, ca_cert=ca_cert
-        )
+        return GrpcClient("localhost", grpc_server_port, ca_cert=ca_cert)
 
     if connection_type is ConnectionType.MTLS:
-        return GrpcConfig(
-            host="localhost",
-            port=grpc_server_port,
-            mtls=True,
-            client_cert=client_cert,
-            client_key=client_key,
+        return GrpcClient(
+            "localhost",
+            grpc_server_port,
             server_cert=server_cert,
-            ca_cert=ca_cert,
+            client_key=client_key,
+            client_cert=client_cert,
         )
 
     raise ValueError(f"invalid {connection_type=}")
-
-
-@pytest.fixture(scope="session")
-def channel(
-    grpc_server_port,
-    grpc_server,
-    connection_type,
-    ca_cert,
-    client_key,
-    client_cert,
-    server_cert,
-):
-    """Returns returns a grpc client connected to a locally running server"""
-    return channel_factory(
-        "localhost",
-        grpc_server_port,
-        connection_type,
-        ca_cert,
-        client_key,
-        client_cert,
-        server_cert,
-    )
 
 
 @pytest.fixture(scope="session")

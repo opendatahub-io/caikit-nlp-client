@@ -1,6 +1,4 @@
 import logging
-from dataclasses import dataclass
-from typing import Optional
 
 import grpc
 from google.protobuf.descriptor_pool import DescriptorPool
@@ -12,54 +10,6 @@ from grpc_reflection.v1alpha.proto_reflection_descriptor_database import (
 log = logging.getLogger(__name__)
 
 
-@dataclass
-class GrpcConfig:
-    host: str
-    port: int
-    tls: bool = False
-    mtls: bool = False
-    ca_cert: Optional[bytes] = None
-    client_key: Optional[bytes] = None
-    client_cert: Optional[bytes] = None
-    server_cert: Optional[bytes] = None
-
-
-def make_channel(config: GrpcConfig) -> grpc.Channel:
-    log.debug(f"Making a channel from this config {config}")
-    if config.host.strip() == "":
-        raise ValueError("A non empty host name is required")
-    if config.port <= 0:
-        raise ValueError("A non zero port is required")
-
-    connection = f"{config.host}:{config.port}"
-
-    if not (config.tls or config.mtls):
-        return grpc.insecure_channel(connection)
-
-    if config.tls:
-        if config.ca_cert is None:
-            raise ValueError("A CA certificate is required")
-        return grpc.secure_channel(
-            connection,
-            grpc.ssl_channel_credentials(config.ca_cert),
-        )
-    if config.mtls:
-        if config.client_key is None:
-            raise ValueError("A client key is required")
-        if config.client_cert is None:
-            raise ValueError("A client certificate is required")
-        if config.server_cert is None:
-            raise ValueError("A server certificate is required")
-
-        return grpc.secure_channel(
-            connection,
-            grpc.ssl_channel_credentials(
-                config.server_cert, config.client_key, config.client_cert
-            ),
-        )
-    raise ValueError("invalid values")
-
-
 class GrpcClient:
     """GRPC client for a caikit nlp runtime server
 
@@ -67,17 +17,18 @@ class GrpcClient:
         channel (grpc.Channel): a connected GRPC channel for use of making the calls.
     """
 
-    def __init__(self, config: GrpcConfig) -> None:
+    def __init__(self, host: str, port: int, **kwarg) -> None:
         """Client class for a Caikit NLP grpc server
 
-        >>> client = GrpcClient(GrpcConfig(host="localhost", port="8085"))
+        >>> # To connect via an insecure port
+        >>> client = GrpcClient(host="localhost", port="8085")
         >>> generated_text = client.generate_text_stream(
                 "flan-t5-small-caikit",
                 "What is the boiling point of Nitrogen?"
             )
         """
 
-        self._channel = make_channel(config)
+        self._channel = self.__make_channel(host, port, **kwarg)
         try:
             self.reflection_db = ProtoReflectionDescriptorDatabase(self._channel)
             self.desc_pool = DescriptorPool(self.reflection_db)
@@ -200,3 +151,33 @@ class GrpcClient:
     def __del__(self):
         if hasattr(self, "_channel") and self._channel:
             self._channel.close()
+
+    def __make_channel(self, host: str, port: int, **kwargs) -> grpc.Channel:
+        log.debug(f"Making a channel for {host}:{port} with these kwargs={kwargs}")
+        if host.strip() == "":
+            raise ValueError("A non empty host name is required")
+        if port <= 0:
+            raise ValueError("A non zero port is required")
+
+        connection = f"{host}:{port}"
+        ca_cert = kwargs.get("ca_cert")
+        if ca_cert:
+            log.debug("A CA certificate has been detected, creating a TLS channel")
+            return grpc.secure_channel(
+                connection,
+                grpc.ssl_channel_credentials(ca_cert),
+            )
+        client_key = kwargs.get("client_key")
+        client_cert = kwargs.get("client_cert")
+        server_cert = kwargs.get("server_cert")
+        if client_key and client_cert and server_cert:
+            log.debug(
+                "A client key, client and server certificates have been detected, \
+                creating a mTLS channel"
+            )
+            return grpc.secure_channel(
+                connection,
+                grpc.ssl_channel_credentials(server_cert, client_key, client_cert),
+            )
+        log.debug("No certificates detected creating an insecure connection")
+        return grpc.insecure_channel(connection)

@@ -3,7 +3,6 @@ def test_module():
 
     assert set(caikit_nlp_client.__all__) == {
         "GrpcClient",
-        "GrpcConfig",
         "HttpClient",
         "HttpConfig",
     }
