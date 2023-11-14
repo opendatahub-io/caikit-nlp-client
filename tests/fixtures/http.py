@@ -12,17 +12,22 @@ def http_server_thread_port():
 
 
 @pytest.fixture(scope="session")
+def using_real_caikit(pytestconfig):
+    return pytestconfig.option.real_caikit
+
+
+@pytest.fixture(scope="session")
 def http_client(
     caikit_nlp_runtime,
     http_server,
-    pytestconfig,
+    using_real_caikit,
     request: pytest.FixtureRequest,
     connection_type,
     client_cert_file,
     client_key_file,
     ca_cert_file,
 ) -> HttpClient:
-    if pytestconfig.option.real_caikit:
+    if using_real_caikit:
         if connection_type is not ConnectionType.INSECURE:
             pytest.skip(reason="not testing TLS with a docker caikit instance")
 

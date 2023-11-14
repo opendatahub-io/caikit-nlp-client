@@ -75,7 +75,53 @@ def test_generate_text_stream_with_optional_args(
     assert response_list
     assert all(isinstance(text, str) for text in response_list)
 
-
-def test_request_invalid_kwarg(model_name, grpc_client):
     with pytest.raises(ValueError, match="Unsupported kwarg key='invalid_kwarg'"):
         grpc_client.generate_text(model_name, "dummy", invalid_kwarg=42)
+
+
+def test_request_exception_handling(
+    using_real_caikit,
+    grpc_client,
+    mock_text_generation,
+    model_name,
+):
+    """force generation of an exception at text generation time to make
+    sure the client returns useful information,"""
+    exc_prefix = (
+        "Exception raised during inference. This may be a problem with your input:"
+    )
+    stream_exc_prefix = "Exception iterating responses:"
+    if using_real_caikit:
+        prompt = "dummy"
+        detail = "Value out of range: -1"
+        match = f"{exc_prefix} {detail}"
+        match_stream = f"{stream_exc_prefix} {detail}"
+        kwargs = {
+            # provide invalid kwargs
+            "min_new_tokens": -1,
+        }
+    else:
+        # mock_text_generation raises an exception when [[raise exception]] is in
+        # the input text
+        detail = "user requested an exception"
+        prompt = "[[raise exception]] dummy"
+        match = f"{exc_prefix} {detail}"
+        match_stream = f"{stream_exc_prefix} {detail}"
+        kwargs = {}
+
+    with pytest.raises(
+        RuntimeError,
+        match=match,
+    ):
+        grpc_client.generate_text(
+            model_name,
+            prompt,
+            **kwargs,
+        )
+
+    streaming_response = grpc_client.generate_text_stream(model_name, prompt, **kwargs)
+    with pytest.raises(
+        RuntimeError,
+        match=match_stream,
+    ):
+        list(streaming_response)
