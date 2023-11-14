@@ -37,11 +37,11 @@ def make_channel(config: GrpcConfig) -> grpc.Channel:
         return grpc.insecure_channel(connection)
 
     if config.tls:
+        if config.ca_cert is None:
+            raise ValueError("A CA certificate is required")
         return grpc.secure_channel(
             connection,
-            grpc.ssl_channel_credentials(
-                config.ca_cert, config.client_key, config.client_cert
-            ),
+            grpc.ssl_channel_credentials(config.ca_cert),
         )
     if config.mtls:
         if config.client_key is None:
