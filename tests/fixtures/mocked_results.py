@@ -82,7 +82,10 @@ def generated_text_stream_result(caikit_test_producer, generated_text, prompt):
 
 @pytest.fixture(scope="session")
 def mock_text_generation(
-    generated_text_result, generated_text_stream_result, monkeysession
+    request: pytest.FixtureRequest,
+    generated_text_result,
+    generated_text_stream_result,
+    monkeysession,
 ):
     # import caikit_nlp.modules.text_generation.text_generation_local
     import caikit_nlp.modules.text_generation.text_generation_tgis
@@ -100,15 +103,28 @@ def mock_text_generation(
     # )
 
     class StubTGISGenerationClient:
+        """stub TGISGenerationClient
+
+        `raise_exception` can be passed as kwarg with any value to raise
+        an exception for a text generation  request
+
+        """
+
         def __init__(self, *args, **kwargs):
             pass
 
         def unary_generate(self, *args, **kwargs) -> GeneratedTextResult:
+            if "[[raise exception]]" in kwargs["text"]:
+                raise ValueError("user requested an exception")
+
             return generated_text_result
 
         def stream_generate(
             self, *args, **kwargs
         ) -> Iterable[GeneratedTextStreamResult]:
+            if "[[raise exception]]" in kwargs["text"]:
+                raise ValueError("user requested an exception")
+
             yield from generated_text_stream_result
 
     monkeysession.setattr(

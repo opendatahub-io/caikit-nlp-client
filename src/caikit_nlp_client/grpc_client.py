@@ -42,41 +42,50 @@ class GrpcClient:
         >>> )
         """
 
-        self._channel = self._make_channel(
-            host,
-            port,
-            insecure=insecure,
-            client_key=client_key,
-            client_cert=client_cert,
-            ca_cert=ca_cert,
-        )
+        try:
+            self._channel = self._make_channel(
+                host,
+                port,
+                insecure=insecure,
+                client_key=client_key,
+                client_cert=client_cert,
+                ca_cert=ca_cert,
+            )
+        except grpc._channel._MultiThreadedRendezvous as exc:
+            log.error("Could not connect to the server: %s", exc.details)
+            raise RuntimeError(f"Could not connect to {host}:{port}") from None
+
         self._reflection_db = ProtoReflectionDescriptorDatabase(self._channel)
         self._desc_pool = DescriptorPool(self._reflection_db)
-        self._text_generation_task_request = GetMessageClass(
-            self._desc_pool.FindMessageTypeByName(
-                "caikit.runtime.Nlp.TextGenerationTaskRequest"
+        try:
+            self._text_generation_task_request = GetMessageClass(
+                self._desc_pool.FindMessageTypeByName(
+                    "caikit.runtime.Nlp.TextGenerationTaskRequest"
+                )
             )
-        )
-        self._task_text_generation_request = GetMessageClass(
-            self._desc_pool.FindMessageTypeByName(
-                "caikit.runtime.Nlp.ServerStreamingTextGenerationTaskRequest"
+            self._task_text_generation_request = GetMessageClass(
+                self._desc_pool.FindMessageTypeByName(
+                    "caikit.runtime.Nlp.ServerStreamingTextGenerationTaskRequest"
+                )
             )
-        )
-        self._generated_text_result = GetMessageClass(
-            self._desc_pool.FindMessageTypeByName(
-                "caikit_data_model.nlp.GeneratedTextResult"
+            self._generated_text_result = GetMessageClass(
+                self._desc_pool.FindMessageTypeByName(
+                    "caikit_data_model.nlp.GeneratedTextResult"
+                )
             )
-        )
-        self._task_predict = self._channel.unary_unary(
-            "/caikit.runtime.Nlp.NlpService/TextGenerationTaskPredict",
-            request_serializer=self._text_generation_task_request.SerializeToString,
-            response_deserializer=self._generated_text_result.FromString,
-        )
-        self._streaming_task_predict = self._channel.unary_stream(
-            "/caikit.runtime.Nlp.NlpService/ServerStreamingTextGenerationTaskPredict",
-            request_serializer=self._task_text_generation_request.SerializeToString,
-            response_deserializer=self._generated_text_result.FromString,
-        )
+            self._task_predict = self._channel.unary_unary(
+                "/caikit.runtime.Nlp.NlpService/TextGenerationTaskPredict",
+                request_serializer=self._text_generation_task_request.SerializeToString,
+                response_deserializer=self._generated_text_result.FromString,
+            )
+            self._streaming_task_predict = self._channel.unary_stream(
+                "/caikit.runtime.Nlp.NlpService/ServerStreamingTextGenerationTaskPredict",
+                request_serializer=self._task_text_generation_request.SerializeToString,
+                response_deserializer=self._generated_text_result.FromString,
+            )
+        except KeyError as exc:
+            log.error("The grpc server does not have the type: %s", exc)
+            raise ValueError(str(exc)) from exc
 
     def generate_text(self, model_id: str, text: str, **kwargs) -> str:
         """Sends a generate text request to the server for the given model id
@@ -105,8 +114,13 @@ class GrpcClient:
         metadata = [("mm-model-id", model_id)]
 
         request = self._text_generation_task_request()
+
         self._populate_request(request, text, **kwargs)
-        response = self._task_predict(request=request, metadata=metadata)
+        try:
+            response = self._task_predict(request=request, metadata=metadata)
+        except grpc._channel._InactiveRpcError as exc:
+            raise RuntimeError(exc.details()) from None
+
         log.debug(f"Response: {response}")
         result = response.generated_text
         log.info("Calling generate_text was successful")
@@ -160,12 +174,15 @@ class GrpcClient:
         request = self._task_text_generation_request()
         self._populate_request(request, text, **kwargs)
 
-        yield from (
-            message.generated_text
-            for message in self._streaming_task_predict(
-                metadata=metadata, request=request
+        try:
+            yield from (
+                message.generated_text
+                for message in self._streaming_task_predict(
+                    metadata=metadata, request=request
+                )
             )
-        )
+        except grpc._channel._MultiThreadedRendezvous as exc:
+            raise RuntimeError(exc.details()) from None
 
     def _populate_request(self, request: "Message", text: str, **kwargs):
         """dynamically converts kwargs to request attributes."""
