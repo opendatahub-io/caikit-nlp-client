@@ -95,6 +95,13 @@ class GrpcClient:
         log.info("Calling generate_text was successful")
         return result
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        self._close()
+        return False
+
     def generate_text_stream(self, model_id: str, text: str, **kwargs) -> list[str]:
         """Sends a generate text stream request to the server for the given model id
 
@@ -142,9 +149,15 @@ class GrpcClient:
             except AttributeError as exc:
                 raise ValueError(f"Unsupported kwarg {key=}") from exc
 
+    def _close(self):
+        try:
+            if hasattr(self, "_channel") and self._channel:
+                self._channel.close()
+        except Exception:
+            log.exception("Unexpected exception while closing client")
+
     def __del__(self):
-        if hasattr(self, "_channel") and self._channel:
-            self._channel.close()
+        self._close()
 
     def __make_channel(self, host: str, port: int, **kwargs) -> grpc.Channel:
         log.debug(f"Making a channel for {host}:{port} with these kwargs={kwargs}")

@@ -1,4 +1,7 @@
 import pytest
+from caikit_nlp_client.grpc_client import GrpcClient
+
+from .fixtures.utils import ConnectionType
 
 
 def test_generate_text(model_name, grpc_client, generated_text_result):
@@ -19,6 +22,17 @@ def test_generate_text_with_optional_args(
     )
     assert generated_text == generated_text_result.generated_text
     # TODO: also validate passing of parameters
+
+
+@pytest.mark.parametrize("connection_type", [ConnectionType.INSECURE], scope="session")
+def test_context_manager(mocker, grpc_server):
+    with GrpcClient(*grpc_server) as client:
+        close_spy = mocker.spy(client, "_close")
+        channel = client._channel
+        channel_close_spy = mocker.spy(channel, "close")
+
+    close_spy.assert_called()
+    channel_close_spy.assert_called()
 
 
 def test_generate_text_with_no_model_id(grpc_client):
