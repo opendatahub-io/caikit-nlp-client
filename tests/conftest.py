@@ -3,19 +3,16 @@ from pathlib import Path
 import caikit
 import pytest
 
-from .fixtures.grpc import (  # noqa: F401
-    grpc_client,
-    grpc_server,
-    grpc_server_port,
-)
-from .fixtures.http import (  # noqa: F401
-    http_config,
-    http_server,
-    http_server_port,
-)
-from .fixtures.mocked_results import *  # noqa: F403
-from .fixtures.tls import *  # noqa: F403
+from .fixtures.docker import *
+from .fixtures.grpc import *
+from .fixtures.http import *
+from .fixtures.mocked_results import *
+from .fixtures.tls import *
 from .fixtures.utils import ConnectionType
+
+
+def pytest_configure(config):
+    pass
 
 
 @pytest.fixture(scope="session")
@@ -25,13 +22,16 @@ def monkeysession():
 
 
 @pytest.fixture
-def model_name():
+def model_name(request: pytest.FixtureRequest):
     """name of the model utilized by the tests. Has to be in `tests/tiny_models`"""
     # Note that this can be overridden in tests via indirect parametrization
+    if "caikit_tgis_service" in request.fixturenames:
+        return "flan-t5-small-caikit"
+
     available_models = [
+        "T5ForConditionalGeneration-caikit",
         "BertForSequenceClassification-caikit",
         "BloomForCausalLM-caikit",
-        "T5ForConditionalGeneration-caikit",
     ]
     return available_models[0]
 
@@ -47,13 +47,14 @@ def connection_type(request):
 
 @pytest.fixture(scope="session")
 def caikit_nlp_runtime(
-    grpc_server_port,  # noqa: F811
-    http_server_port,  # noqa: F811
+    grpc_server_thread_port,  # noqa: F811
+    http_server_thread_port,  # noqa: F811
     connection_type,
     server_key_file,
     server_cert_file,
     ca_cert_file,
 ):
+    """configures caikit for local testing"""
     models_directory = str(Path(__file__).parent / "tiny_models")
 
     tgis_backend_config = [
@@ -69,10 +70,10 @@ def caikit_nlp_runtime(
             "local_models_dir": models_directory,
             "library": "caikit_nlp",
             "lazy_load_local_models": True,
-            "grpc": {"enabled": True, "port": grpc_server_port},
+            "grpc": {"enabled": True, "port": grpc_server_thread_port},
             "http": {
                 "enabled": True,
-                "port": http_server_port,
+                "port": http_server_thread_port,
                 "server_shutdown_grace_period_seconds": 2,
             },
         },

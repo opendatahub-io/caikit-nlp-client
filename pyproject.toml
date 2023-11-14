@@ -50,6 +50,7 @@ types = [
 tests = [
     "pytest",
     "pytest-cov",
+    "pytest-docker",
     "coverage[toml]",
     "grpcio-health-checking",
     "caikit-nlp @ git+https://github.com/caikit/caikit-nlp@4a5b2f8",
@@ -92,6 +93,7 @@ ignore = []
 
 [tool.ruff.per-file-ignores]
 "__init__.py" = ["F401"]
+"tests/conftest.py" = ["F403"]
 
 
 [[tool.mypy.overrides]]

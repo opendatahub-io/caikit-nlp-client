@@ -15,7 +15,7 @@ def caikit_test_producer():
 
 @pytest.fixture(scope="session")
 def generated_text():
-    yield "mocked generated text result"
+    yield "a symphony"
 
 
 @pytest.fixture(scope="session")
@@ -26,7 +26,7 @@ def generated_text_result(caikit_test_producer, generated_text):
     )
 
     yield GeneratedTextResult(
-        generated_text="mocked generated text result",
+        generated_text=generated_text,
         generated_tokens=42,
         finish_reason=FinishReason.EOS_TOKEN,
         producer_id=caikit_test_producer,
@@ -46,7 +46,7 @@ def generated_text_stream_result(caikit_test_producer, generated_text):
         TokenStreamDetails,
     )
 
-    split_text = generated_text.split(" ")
+    split_text = ["", "life", " is", " ", "a", " state", " of", " being", ""]
 
     # TODO: validate token_list
     token_list = [GeneratedToken(text="dummy generated token value", logprob=0.42)]
