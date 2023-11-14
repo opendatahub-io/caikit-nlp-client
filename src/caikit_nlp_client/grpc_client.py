@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -25,11 +26,11 @@ class GrpcClient:
         """Client class for a Caikit NLP grpc server
 
         >>> # To connect via an insecure port
-        >>> client = GrpcClient(host="localhost", port="8085")
+        >>> client = GrpcClient("localhost", port=8085)
         >>> generated_text = client.generate_text_stream(
-                "flan-t5-small-caikit",
-                "What is the boiling point of Nitrogen?"
-            )
+        >>>     "flan-t5-small-caikit",
+        >>>     "What is the boiling point of Nitrogen?",
+        >>> )
         """
 
         self._channel = self._make_channel(host, port, **kwarg)
@@ -102,7 +103,9 @@ class GrpcClient:
         self._close()
         return False
 
-    def generate_text_stream(self, model_id: str, text: str, **kwargs) -> list[str]:
+    def generate_text_stream(
+        self, model_id: str, text: str, **kwargs
+    ) -> Iterable["Message"]:
         """Sends a generate text stream request to the server for the given model id
 
         Args:
@@ -116,13 +119,28 @@ class GrpcClient:
 
         Raises:
             ValueError: thrown if an empty model id is passed
-            exc: thrown if any exceptions are caught while creating and sending the
-                text generation request
 
         Returns:
             a list of generated text (token)
+
+        Example:
+
+        >>> text = "What is 2+2?"
+        >>> chunks = []
+        >>> for message in grpc_client.generate_text_stream(
+        >>>     "flan-t5-small-caikit",
+        >>>     text,
+        >>> ):
+        >>>     chunk = message.generated_text
+        >>>     if not message.finish_reason: # NOT_FINISHED is 0
+        >>>         print("Got chunk")
+        >>>         chunks.append(chunk)
+        >>> finish_reason = message.finish_reason
+        >>> print(f"final result: {''.join(chunks)}")
+        >>> print(f"{finish_reason=}")
+
         """
-        if model_id == "":
+        if not model_id:
             raise ValueError("request must have a model id")
 
         log.info(f"Calling generate_text_stream for '{model_id}'")
@@ -131,14 +149,8 @@ class GrpcClient:
 
         request = self._task_text_generation_request()
         self._populate_request(request, text, **kwargs)
-        result = []
-        for item in self._streaming_task_predict(metadata=metadata, request=request):
-            result.append(item.generated_text)
-        log.info(
-            f"Calling generate_text_stream was successful, '{len(result)}'"
-            " items in result"
-        )
-        return result
+
+        yield from self._streaming_task_predict(metadata=metadata, request=request)
 
     def _populate_request(self, request: "Message", text: str, **kwargs):
         """dynamically converts kwargs to request attributes."""

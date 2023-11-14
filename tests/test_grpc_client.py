@@ -45,7 +45,7 @@ def test_generate_text_stream(model_name, grpc_client, generated_text_stream_res
         model_name, "What is the meaning of life?"
     )
 
-    assert result == [
+    assert [chunk.generated_text for chunk in result] == [
         stream_part.generated_text for stream_part in generated_text_stream_result
     ]
 
@@ -60,7 +60,7 @@ def test_generate_text_stream_with_optional_args(
         max_new_tokens=20,
         min_new_tokens=4,
     )
-    assert result == [
+    assert [chunk.generated_text for chunk in result] == [
         stream_part.generated_text for stream_part in generated_text_stream_result
     ]
     # TODO: also validate passing of parameters
