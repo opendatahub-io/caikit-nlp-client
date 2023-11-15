@@ -128,7 +128,7 @@ class HttpClient:
             self._api_url,
             json=json_input,
             timeout=10.0,
-            **req_kwargs,
+            **req_kwargs,  # type: ignore
         )
 
         response.raise_for_status()  # TODO
