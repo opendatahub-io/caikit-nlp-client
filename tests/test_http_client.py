@@ -1,3 +1,5 @@
+from types import GeneratorType
+
 import pytest
 from requests.exceptions import SSLError
 
@@ -59,12 +61,12 @@ def test_generate_text_with_no_model_id(http_client):
 
 
 def test_generate_text_stream(http_client, model_name, generated_text_stream_result):
-    messages = list(
-        http_client.generate_text_stream(model_name, "What is the meaning of life?")
+    result = http_client.generate_text_stream(
+        model_name, "What is the meaning of life?"
     )
-    assert len(messages) == 14
 
-    assert [message["generated_text"] for message in messages] == [
+    assert isinstance(result, GeneratorType)
+    assert [message['generated_text') for message in result] == [
         stream_part.generated_text for stream_part in generated_text_stream_result
     ]
 
@@ -72,16 +74,19 @@ def test_generate_text_stream(http_client, model_name, generated_text_stream_res
 def test_generate_text_stream_with_optional_args(
     http_client, model_name, generated_text_stream_result
 ):
-    messages = http_client.generate_text_stream(
+    response = http_client.generate_text_stream(
         model_name,
         "What is the meaning of life?",
         preserve_input_text=False,
         max_new_tokens=20,
         min_new_tokens=4,
     )
-    assert [message["generated_text"] for message in messages] == [
+
+    assert isinstance(result, GeneratorType)
+    assert [message['generated_text') for message in result] == [
         stream_part.generated_text for stream_part in generated_text_stream_result
     ]
+    # TODO: verify passing of parameters using mocker.spy
 
 
 @pytest.mark.parametrize("connection_type", [ConnectionType.TLS], indirect=True)
