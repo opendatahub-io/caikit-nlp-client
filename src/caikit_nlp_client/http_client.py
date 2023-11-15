@@ -160,57 +160,50 @@ class HttpClient:
 
         >>> text = "What is 2+2?"
         >>> chunks = []
-        >>> for message in http_client.generate_text_stream(
+        >>> for chunk in http_client.generate_text_stream(
         >>>     "flan-t5-small-caikit",
         >>>     text,
         >>> ):
-        >>>     chunk = message.generated_text
-        >>>     if message["details"]["finish_reason"] == "NOT_FINISHED":
-        >>>         print("Got chunk")
-        >>>         chunks.append(chunk)
-        >>>     print(f"final result: {''.join(chunks)}")
-        >>>     print(f"finish_reason: {message['details']['finish_reason']}")
-        """
-        if model_id == "":
-            raise ValueError("request must have a model id")
-        log.info(f"Calling generate_text_stream for '{model_id}'")
-        json_input = self._create_json_request(model_id, text, **kwargs)
+        >>>     print(f"Got {chunk=}")
+        >>>     chunks.append(chunk)
+        >>> print(f"final result: {''.join(chunks)}")
 
-        kwargs = {}
-        if self._mtls:
-            kwargs["verify"] = self._ca_crt_path
-            kwargs["cert"] = (
-                self._client_crt_path,
-                self._client_key_path,
-            )
+        """
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        log.info(f"Calling generate_text_stream for '{model_id}'")
+
+        payload: dict[str, Any] = {
+            "model_id": model_id,
+            "inputs": text,
+        }
+        if kwargs:
+            payload["parameters"] = kwargs
+
+        req_kwargs = self._get_tls_configuration()
 
         response = requests.post(
             self._stream_api_url,
-            json=json_input,
+            json=payload,
             timeout=10.0,
             **req_kwargs,  # type: ignore
         )
 
-        buffer: list[bytes] = []
         for line in response.iter_lines():
-            if line:
-                # each line will be in the format <message type>: <data>
-                # we don't care about the message type
-                buffer.append(line.split(b":", maxsplit=1)[1])
+            # each line will be in the format <message type>: <data>
+            # we only care about "data" messages
+            if not line.startswith(b"data:"):
                 continue
 
             try:
-                message = json.loads(b"".join(buffer))
-            except json.JSONDecodeError:
-                # message not over yet
-                continue
+                # line starts with `data: `, which is 6 bytes, skip those.
+                # The rest will be the json payload
+                message_data = json.loads(line[6:])
+            except json.JSONDecodeError as exc:
+                raise ValueError("Failed to parse response from the endpoint") from exc
 
-            buffer.clear()
-            yield message
-
-        if buffer:
-            final_message = json.loads(b"".join(buffer))
-            yield final_message
+            yield message_data["generated_text"]
 
     def _create_json_request(self, model_id, text, **kwargs) -> dict[str, Any]:
         json_input = {
