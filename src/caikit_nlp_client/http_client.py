@@ -190,20 +190,25 @@ class HttpClient:
             **req_kwargs,  # type: ignore
         )
 
+        buffer: list[bytes] = []
         for line in response.iter_lines():
-            # each line will be in the format <message type>: <data>
-            # we only care about "data" messages
-            if not line.startswith(b"data:"):
+            if line:
+                # the first 6 bytes contain "data: ", we can skip those
+                buffer.append(line[6:])
                 continue
 
             try:
-                # line starts with `data: `, which is 6 bytes, skip those.
-                # The rest will be the json payload
-                message_data = json.loads(line[6:])
-            except json.JSONDecodeError as exc:
-                raise ValueError("Failed to parse response from the endpoint") from exc
+                message = json.loads(b"".join(buffer))
+            except json.JSONDecodeError:
+                # message not over yet
+                continue
 
-            yield message_data["generated_text"]
+            buffer.clear()
+            yield message["generated_text"]
+
+        if buffer:
+            final_message = json.loads(b"".join(buffer))
+            yield final_message["generated_text"]
 
     def _create_json_request(self, model_id, text, **kwargs) -> dict[str, Any]:
         json_input = {
