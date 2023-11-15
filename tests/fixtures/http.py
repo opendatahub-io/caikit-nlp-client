@@ -30,20 +30,24 @@ def http_client(
     else:
         host, port = request.getfixturevalue("http_server_thread")
 
-    if connection_type is ConnectionType.INSECURE:
-        return HttpClient(base_url=f"http://{host}:{port}")
+    kwargs: dict[str, str] = {}
 
-    elif connection_type is ConnectionType.TLS:
-        return HttpClient(base_url=f"https://{host}:{port}")
-    elif connection_type is ConnectionType.MTLS:
-        return HttpClient(
-            base_url=f"https://{host}:{port}",
-            client_crt_path=client_cert_file,
-            client_key_path=client_key_file,
-            ca_crt_path=ca_cert_file,
-        )
+    if connection_type is ConnectionType.INSECURE:
+        url = f"http://{host}:{port}"
+    elif connection_type in (ConnectionType.TLS, ConnectionType.MTLS):
+        url = f"https://{host}:{port}"
+        kwargs.update(
+            ca_cert_path=ca_cert_file
+        )  # FIXME: could handle as a monkeypatch of REQUESTS_CA_BUNDLE
+        if connection_type is ConnectionType.MTLS:
+            kwargs.update(
+                client_cert_path=client_cert_file,
+                client_key_path=client_key_file,
+            )
     else:
         raise ValueError(f"invalid {connection_type=}")
+
+    return HttpClient(url, **kwargs)
 
 
 @pytest.fixture(scope="session")
