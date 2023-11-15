@@ -7,32 +7,32 @@ from requests.exceptions import SSLError
 from .conftest import ConnectionType
 
 
-def test_generate_text(
-    http_client,
-    model_name,
-    prompt,
-):
+def test_generate_text(http_client, model_name, prompt, mocker):
+    import requests
+
+    mock = mocker.spy(requests, "post")
+
     generated_text = http_client.generate_text(model_name, prompt)
 
     assert isinstance(generated_text, str)
     assert generated_text
+    assert "timeout" in mock.call_args_list[0].kwargs
 
 
 def test_generate_text_with_optional_args(
-    http_client,
-    model_name,
-    generated_text_result,
-    prompt,
+    http_client, model_name, generated_text_result, prompt, mocker
 ):
+    import requests
+
+    mock = mocker.spy(requests, "post")
+
     generated_text = http_client.generate_text(
-        model_name,
-        prompt,
-        max_new_tokens=20,
-        min_new_tokens=4,
+        model_name, prompt, timeout=42.0, max_new_tokens=20, min_new_tokens=4
     )
 
     assert isinstance(generated_text, str)
     assert generated_text
+    assert mock.call_args_list[-1].kwargs["timeout"] == 42.0
     # TODO: also validate passing of parameters using mocker.spy
 
 
@@ -80,7 +80,6 @@ def test_generate_text_stream_with_optional_args(
     response_list = list(response)
     assert response_list
     assert all(isinstance(text, str) for text in response_list)
-
     # TODO: verify passing of parameters using mocker.spy
 
 
