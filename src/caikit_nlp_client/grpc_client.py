@@ -32,7 +32,7 @@ class GrpcClient:
             )
         """
 
-        self._channel = self.__make_channel(host, port, **kwarg)
+        self._channel = self._make_channel(host, port, **kwarg)
         self._reflection_db = ProtoReflectionDescriptorDatabase(self._channel)
         self._desc_pool = DescriptorPool(self._reflection_db)
         self._text_generation_task_request = GetMessageClass(
@@ -159,7 +159,7 @@ class GrpcClient:
     def __del__(self):
         self._close()
 
-    def __make_channel(self, host: str, port: int, **kwargs) -> grpc.Channel:
+    def _make_channel(self, host: str, port: int, **kwargs) -> grpc.Channel:
         log.debug(f"Making a channel for {host}:{port} with these kwargs={kwargs}")
         if host.strip() == "":
             raise ValueError("A non empty host name is required")

@@ -1,6 +1,6 @@
 import pytest
 import requests
-from caikit_nlp_client.http_client import HttpConfig
+from caikit_nlp_client.http_client import HttpClient
 
 from .utils import ConnectionType, get_random_port, wait_until
 
@@ -12,30 +12,38 @@ def http_server_thread_port():
 
 
 @pytest.fixture(scope="session")
-def http_config(
+def http_client(
+    caikit_nlp_runtime,
     http_server,
+    pytestconfig,
+    request: pytest.FixtureRequest,
     connection_type,
     client_cert_file,
     client_key_file,
     ca_cert_file,
-    server_cert_file,
-):
-    http_config = HttpConfig(*http_server)
+) -> HttpClient:
+    if pytestconfig.option.real_caikit:
+        if connection_type is not ConnectionType.INSECURE:
+            pytest.skip(reason="not testing TLS with a docker caikit instance")
+
+        host, port = request.getfixturevalue("http_server_docker")
+    else:
+        host, port = request.getfixturevalue("http_server_thread")
 
     if connection_type is ConnectionType.INSECURE:
-        return http_config
+        return HttpClient(base_url=f"http://{host}:{port}")
 
     elif connection_type is ConnectionType.TLS:
-        http_config.tls = True
-        return http_config
+        return HttpClient(base_url=f"https://{host}:{port}")
+    elif connection_type is ConnectionType.MTLS:
+        return HttpClient(
+            base_url=f"https://{host}:{port}",
+            client_crt_path=client_cert_file,
+            client_key_path=client_key_file,
+            ca_crt_path=ca_cert_file,
+        )
     else:
-        http_config.mtls = True
-        http_config.client_crt_path = client_cert_file
-        http_config.client_key_path = client_key_file
-        http_config.ca_crt_path = ca_cert_file
-        return http_config
-
-    raise ValueError(f"invalid {connection_type=}")
+        raise ValueError(f"invalid {connection_type=}")
 
 
 @pytest.fixture(scope="session")
