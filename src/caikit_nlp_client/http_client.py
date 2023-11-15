@@ -1,7 +1,7 @@
 import json
 import logging
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Optional, Union
 
 import requests
 
@@ -15,21 +15,33 @@ class HttpClient:
         http_config (HttpConfig): Configurations to make HTTP call.
     """
 
-    def __init__(self, base_url: str, **kwargs):
+    def __init__(
+        self,
+        base_url: str,
+        ca_cert_path: Optional[str] = None,
+        client_cert_path: Optional[str] = None,
+        client_key_path: Optional[str] = None,
+        **kwargs,
+    ):
         """Client class for a Caikit NLP HTTP server
-        >>> # For unsecured connections use (the port is optional)
+
+        For unsecured connections:
+
         >>> client = HttpClient("http://localhost:8080")
-        >>> # For TLS (https) connections use (the port is optional):
+
+        For TLS (https) connections:
+
         >>> client = HttpClient("https://localhost:8080")
-        >>> # For mTLS connections use (the port is optional):
+
+        For mTLS connections, both client_cert_path and client_key_path have to be
+        provided:
+
         >>> client = HttpClient("https://localhost:8080",
-            ca_cert_path='path to ca pem file', \
-                client_cert_path='path to client pem file', \
-                    client_key_path='path to client private key file')
-        >>> generated_text = client.generate_text_stream(
-                "flan-t5-small-caikit",
-                "What is the boiling point of Nitrogen?"
-            )
+        >>>     ca_cert_path="path/to/ca.pem",
+        >>>     client_cert_path='path/to/client_cert.pem',
+        >>>     client_key_path='path/to/client_key.pem'
+        >>> )
+
         """
         text_generation_endpoint = "/api/v1/task/text-generation"
         text_generation_stream_endpoint = (
@@ -38,16 +50,41 @@ class HttpClient:
 
         self._api_url = f"{base_url}{text_generation_endpoint}"
         self._stream_api_url = f"{base_url}{text_generation_stream_endpoint}"
-        self._mtls = False
+
+        self._client_cert_path = client_cert_path
+        self._client_key_path = client_key_path
+        self._ca_cert_path = ca_cert_path
         if (
-            "client_crt_path" in kwargs
-            and "client_key_path" in kwargs
-            and "ca_crt_path" in kwargs
+            any(
+                (
+                    self._client_key_path,
+                    self._client_cert_path,
+                )
+            )
+            and not self._mtls_configured
         ):
-            self._mtls = True
-            self._client_crt_path = kwargs.get("client_crt_path")
-            self._client_key_path = kwargs.get("client_key_path")
-            self._ca_crt_path = kwargs.get("ca_crt_path")
+            raise ValueError(
+                "Must provide both client_cert_path and client_key_path for mTLS"
+            )
+
+    @property
+    def _mtls_configured(self):
+        return all((self._client_key_path, self._client_cert_path))
+
+    def _get_tls_configuration(self) -> dict[str, Union[str, tuple[str, str]]]:
+        req_kwargs: dict[str, Union[str, tuple[str, str]]] = {}
+        if self._mtls_configured:
+            assert self._client_key_path
+            assert self._client_cert_path
+
+            req_kwargs["cert"] = (
+                self._client_cert_path,
+                self._client_key_path,
+            )
+        if self._ca_cert_path:
+            req_kwargs["verify"] = self._ca_cert_path
+
+        return req_kwargs
 
     def generate_text(self, model_id: str, text: str, **kwargs) -> str:
         """Queries the `text-generation` endpoint for the given model_id
@@ -68,28 +105,38 @@ class HttpClient:
 
         Returns:
             the generated text
-        """
-        if model_id == "":
-            raise ValueError("request must have a model id")
-        log.info(f"Calling generate_text for '{model_id}'")
-        json_input = self._create_json_request(model_id, text, **kwargs)
 
-        kwargs = {}
-        if self._mtls:
-            kwargs["verify"] = self._ca_crt_path
-            kwargs["cert"] = (
-                self._client_crt_path,
-                self._client_key_path,
+        Example:
+
+        >>> generated_text = client.generate_text(
+                "flan-t5-small-caikit",
+                "What is the boiling point of Nitrogen?"
             )
-        response = requests.post(self._api_url, json=json_input, timeout=10.0, **kwargs)
-        log.debug(f"Response: {response}")
-        result: str = response.text
-        log.info("Calling generate_text was successful")
-        return result
+        """
+        if not model_id:
+            raise ValueError("request must have a model id")
 
-    def generate_text_stream(
-        self, model_id: str, text: str, **kwargs
-    ) -> Iterable[dict[str, Any]]:
+        log.info(f"Calling generate_text for '{model_id}'")
+        json_input = self._create_json_request(
+            model_id,
+            text,
+            **kwargs,
+        )
+
+        req_kwargs = self._get_tls_configuration()
+
+        response = requests.post(
+            self._api_url,
+            json=json_input,
+            timeout=10.0,
+            **req_kwargs,
+        )
+
+        response.raise_for_status()  # TODO
+
+        return response.json()["generated_text"]
+
+    def generate_text_stream(self, model_id: str, text: str, **kwargs) -> Iterable[str]:
         """Queries the `text-generation` stream endpoint for the given model_id
 
         Args:
@@ -138,7 +185,10 @@ class HttpClient:
             )
 
         response = requests.post(
-            self._stream_api_url, json=json_input, timeout=10.0, **kwargs
+            self._stream_api_url,
+            json=json_input,
+            timeout=10.0,
+            **req_kwargs,  # type: ignore
         )
 
         buffer: list[bytes] = []

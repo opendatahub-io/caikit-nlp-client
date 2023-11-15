@@ -103,9 +103,7 @@ class GrpcClient:
         self._close()
         return False
 
-    def generate_text_stream(
-        self, model_id: str, text: str, **kwargs
-    ) -> Iterable["Message"]:
+    def generate_text_stream(self, model_id: str, text: str, **kwargs) -> Iterable[str]:
         """Sends a generate text stream request to the server for the given model id
 
         Args:
@@ -121,23 +119,19 @@ class GrpcClient:
             ValueError: thrown if an empty model id is passed
 
         Returns:
-            a list of generated text (token)
+            a list of generated text (tokens)
 
         Example:
 
         >>> text = "What is 2+2?"
         >>> chunks = []
-        >>> for message in grpc_client.generate_text_stream(
+        >>> for chunk in grpc_client.generate_text_stream(
         >>>     "flan-t5-small-caikit",
         >>>     text,
         >>> ):
-        >>>     chunk = message.generated_text
-        >>>     if not message.finish_reason: # NOT_FINISHED is 0
-        >>>         print("Got chunk")
-        >>>         chunks.append(chunk)
-        >>> finish_reason = message.finish_reason
+        >>>     print(f"Got {chunk=}")
+        >>>     chunks.append(chunk)
         >>> print(f"final result: {''.join(chunks)}")
-        >>> print(f"{finish_reason=}")
 
         """
         if not model_id:
@@ -150,7 +144,12 @@ class GrpcClient:
         request = self._task_text_generation_request()
         self._populate_request(request, text, **kwargs)
 
-        yield from self._streaming_task_predict(metadata=metadata, request=request)
+        yield from (
+            message.generated_text
+            for message in self._streaming_task_predict(
+                metadata=metadata, request=request
+            )
+        )
 
     def _populate_request(self, request: "Message", text: str, **kwargs):
         """dynamically converts kwargs to request attributes."""

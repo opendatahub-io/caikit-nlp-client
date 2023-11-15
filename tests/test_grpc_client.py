@@ -1,3 +1,5 @@
+from types import GeneratorType
+
 import pytest
 from caikit_nlp_client.grpc_client import GrpcClient
 
@@ -45,7 +47,8 @@ def test_generate_text_stream(model_name, grpc_client, generated_text_stream_res
         model_name, "What is the meaning of life?"
     )
 
-    assert [chunk.generated_text for chunk in result] == [
+    assert isinstance(result, GeneratorType)
+    assert list(result) == [
         stream_part.generated_text for stream_part in generated_text_stream_result
     ]
 
@@ -60,10 +63,10 @@ def test_generate_text_stream_with_optional_args(
         max_new_tokens=20,
         min_new_tokens=4,
     )
-    assert [chunk.generated_text for chunk in result] == [
+    assert list(result) == [
         stream_part.generated_text for stream_part in generated_text_stream_result
     ]
-    # TODO: also validate passing of parameters
+    # TODO: also validate passing of parameters using mocker.spy
 
 
 def test_request_invalid_kwarg(model_name, grpc_client):
