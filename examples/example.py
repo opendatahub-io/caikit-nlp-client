@@ -1,9 +1,12 @@
-from caikit_nlp_client import GrpcClient, GrpcConfig, HttpClient, HttpConfig
+from caikit_nlp_client import GrpcClient, HttpClient
 
-text = "What is the boilign point of Nitrogen?"
+host = "localhost"
+http_port = 8080
+grpc_port = 8085
+text = "What is the boiling point of Nitrogen?"
 
 # Using the http client
-http_client = HttpClient(HttpConfig(host="localhost", port=8080, tls=False))
+http_client = HttpClient(f"http://{host}:{http_port}")
 
 generated_text = http_client.generate_text("flan-t5-small-caikit", text)
 print(generated_text)
@@ -17,38 +20,43 @@ print(generated_text)
 
 
 # using the grpc client
-grpc_client = GrpcClient(GrpcConfig(host="localhost", port=8085, insecure=True))
-text = http_client.generate_text(
+grpc_client = GrpcClient(host=host, port=grpc_port, insecure=True)
+text = grpc_client.generate_text(
     "flan-t5-small-caikit", text, min_new_tokens=20, max_new_tokens=20
 )
 print(text)
 # 'this is the generated text'
 
-
 # using a context manager (grpc only):
 # (makes sure that the underlying resources are cleaned)
-with GrpcClient("localhost", port=8085) as client:
+with GrpcClient(host, port=grpc_port, insecure=True) as client:
     text = client.generate_text(
         "flan-t5-small-caikit", text, min_new_tokens=20, max_new_tokens=20
     )
 
 
-# streaming implementation, grpc
+# using the streaming implementation, grpc
 chunks = []
-for message in grpc_client.generate_text_stream("flan-t5-small-caikit", text):
-    chunk = message["generated_text"]
-    if not message.finish_reason:
-        print("Got chunk, not finished")
+for chunk in grpc_client.generate_text_stream("flan-t5-small-caikit", text):
+    print(f"Got {chunk=}")
     chunks.append(chunk)
 print(f"generated text: {''.join(chunks)}")
-print(f"finish_reason: {message.finish_reason}")
 
-# streaming implementation, http
+# using the streaming implementation, http
 chunks = []
-for message in http_client.generate_text_stream("flan-t5-small-caikit", text):
-    chunk = message["generated_text"]
-    if message.details.finish_reason == "NOT_FINISHED":
-        print("Got chunk, not finished")
+for chunk in http_client.generate_text_stream("flan-t5-small-caikit", text):
+    print(f"Got {chunk=}")
     chunks.append(chunk)
 print(f"generated text: {''.join(chunks)}")
-print(f"finish_reason: {message['details']['finish_reason']}")
+
+
+# Using a self-signed CA Certificate
+http_client = HttpClient(f"https://{host}:{http_port}", ca_cert_path="ca.pem")
+
+with open("ca.pem", "rb") as fh:
+    ca_cert = fh.read()
+grpc_client = GrpcClient(host, grpc_port, ca_cert=ca_cert)
+
+
+# mTLS
+# TODO
