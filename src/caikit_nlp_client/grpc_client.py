@@ -27,6 +27,7 @@ class GrpcClient:
         host: str,
         port: int,
         *,
+        insecure: bool = False,
         ca_cert: Optional[bytes] = None,
         client_key: Optional[bytes] = None,
         client_cert: Optional[bytes] = None,
@@ -45,6 +46,7 @@ class GrpcClient:
         self._channel = self._make_channel(
             host,
             port,
+            insecure=insecure,
             client_key=client_key,
             client_cert=client_cert,
             server_cert=server_cert,
@@ -191,6 +193,7 @@ class GrpcClient:
         host: str,
         port: int,
         *,
+        insecure: bool = False,
         ca_cert: Optional[bytes] = None,
         client_key: Optional[bytes] = None,
         client_cert: Optional[bytes] = None,
@@ -202,26 +205,28 @@ class GrpcClient:
             raise ValueError("A non zero port number is required")
 
         connection = f"{host}:{port}"
+        if insecure:
+            log.warning("Connecting over an insecure grpc channel")
+            return grpc.insecure_channel(connection)
+
+        credentials_kwargs: dict[str, bytes] = {}
         if ca_cert:
-            # FIXME: we could have a secure channel without providing a CA cert
-            # we can solve this by adding a secure: bool argument
-            log.debug("A CA certificate has been detected, creating a TLS channel")
-            return grpc.secure_channel(
-                connection,
-                grpc.ssl_channel_credentials(ca_cert),
-            )
+            log.info("Connecting using provided CA certificate for secure channel")
+            credentials_kwargs.update(root_certificates=ca_cert)
 
         if client_key and client_cert and server_cert:
-            log.debug(
-                "A client key, client and server certificates have been detected, \
-                creating a mTLS channel"
-            )
-            return grpc.secure_channel(
-                connection,
-                grpc.ssl_channel_credentials(server_cert, client_key, client_cert),
+            log.info("Connecting using mTLS for secure channel")
+            # TODO: check if server_cert has the same meaning as ca_cert, and get
+            # rid of it if so
+            credentials_kwargs.update(
+                root_certificates=server_cert,
+                private_key=client_key,
+                certificate_chain=client_cert,
             )
         elif any((client_cert, client_key, server_cert)):
             raise ValueError("mTLS requires client_cert, client_key and server_cert")
 
-        log.debug("No certificates detected creating an insecure connection")
-        return grpc.insecure_channel(connection)
+        return grpc.secure_channel(
+            connection,
+            grpc.ssl_channel_credentials(**credentials_kwargs),
+        )

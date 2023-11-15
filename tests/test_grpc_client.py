@@ -27,9 +27,11 @@ def test_generate_text_with_optional_args(
 
 
 @pytest.mark.parametrize("connection_type", [ConnectionType.INSECURE], scope="session")
-def test_context_manager(mocker, grpc_server):
-    with GrpcClient(*grpc_server) as client:
+def test_context_manager(mocker, grpc_server, connection_type, request, model_name):
+    with GrpcClient(*grpc_server, insecure=True) as client:
         close_spy = mocker.spy(client, "_close")
+        assert client.generate_text(model_name, "dummy text")
+
         channel = client._channel
         channel_close_spy = mocker.spy(channel, "close")
 

@@ -48,7 +48,7 @@ def grpc_client(
     server_cert,
 ) -> GrpcClient:
     if connection_type is ConnectionType.INSECURE:
-        return GrpcClient(*grpc_server)
+        return GrpcClient(*grpc_server, insecure=True)
 
     if connection_type is ConnectionType.TLS:
         return GrpcClient(*grpc_server, ca_cert=ca_cert)
