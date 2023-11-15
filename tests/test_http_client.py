@@ -1,25 +1,18 @@
 import pytest
-from caikit_nlp_client.http_client import HttpClient
 from requests.exceptions import SSLError
 
 from .conftest import ConnectionType
-
-
-@pytest.fixture
-def http_client(http_config, http_server) -> HttpClient:
-    """Returns a grpc client connected to a locally running server"""
-    return HttpClient(http_config)
 
 
 def test_generate_text(
     http_client,
     model_name,
     generated_text_result,
-    http_config,
     monkeysession,
     ca_cert_file,
+    connection_type,
 ):
-    if http_config.tls:
+    if connection_type is ConnectionType.TLS:
         # a valid certificate autority should validate the response with no extra args
         with monkeysession.context() as monkeypatch:
             monkeypatch.setenv("REQUESTS_CA_BUNDLE", ca_cert_file)
@@ -34,11 +27,11 @@ def test_generate_text_with_optional_args(
     http_client,
     model_name,
     generated_text_result,
-    http_config,
     monkeysession,
     ca_cert_file,
+    connection_type,
 ):
-    if http_config.tls:
+    if connection_type is ConnectionType.TLS:
         # a valid certificate autority should validate the response with no extra args
         with monkeysession.context() as monkeypatch:
             monkeypatch.setenv("REQUESTS_CA_BUNDLE", ca_cert_file)
@@ -94,14 +87,13 @@ def test_generate_text_stream_with_optional_args(
 @pytest.mark.parametrize("connection_type", [ConnectionType.TLS], indirect=True)
 def test_tls_enabled(
     http_client,
-    http_config,
     model_name,
     http_server,
     monkeysession,
     ca_cert_file,
     connection_type,
 ):
-    assert http_config.tls, "TLS should be enabled for this test"
+    assert connection_type is ConnectionType.TLS, "TLS should be enabled for this test"
 
     with pytest.raises(SSLError, match=".*CERTIFICATE_VERIFY_FAILED.*"):
         assert http_client.generate_text(model_name, "dummy text")
