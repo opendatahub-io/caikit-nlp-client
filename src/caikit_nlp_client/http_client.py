@@ -21,7 +21,6 @@ class HttpClient:
         ca_cert_path: Optional[str] = None,
         client_cert_path: Optional[str] = None,
         client_key_path: Optional[str] = None,
-        **kwargs,
     ):
         """Client class for a Caikit NLP HTTP server
 

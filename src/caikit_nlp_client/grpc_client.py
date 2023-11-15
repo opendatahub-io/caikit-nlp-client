@@ -1,6 +1,6 @@
 import logging
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from google._upb._message import Message
@@ -22,7 +22,16 @@ class GrpcClient:
         channel (grpc.Channel): a connected GRPC channel for use of making the calls.
     """
 
-    def __init__(self, host: str, port: int, **kwarg) -> None:
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        *,
+        ca_cert: Optional[bytes] = None,
+        client_key: Optional[bytes] = None,
+        client_cert: Optional[bytes] = None,
+        server_cert: Optional[bytes] = None,
+    ) -> None:
         """Client class for a Caikit NLP grpc server
 
         >>> # To connect via an insecure port
@@ -33,7 +42,14 @@ class GrpcClient:
         >>> )
         """
 
-        self._channel = self._make_channel(host, port, **kwarg)
+        self._channel = self._make_channel(
+            host,
+            port,
+            client_key=client_key,
+            client_cert=client_cert,
+            server_cert=server_cert,
+            ca_cert=ca_cert,
+        )
         self._reflection_db = ProtoReflectionDescriptorDatabase(self._channel)
         self._desc_pool = DescriptorPool(self._reflection_db)
         self._text_generation_task_request = GetMessageClass(
@@ -170,24 +186,31 @@ class GrpcClient:
     def __del__(self):
         self._close()
 
-    def _make_channel(self, host: str, port: int, **kwargs) -> grpc.Channel:
-        log.debug(f"Making a channel for {host}:{port} with these kwargs={kwargs}")
-        if host.strip() == "":
+    def _make_channel(
+        self,
+        host: str,
+        port: int,
+        *,
+        ca_cert: Optional[bytes] = None,
+        client_key: Optional[bytes] = None,
+        client_cert: Optional[bytes] = None,
+        server_cert: Optional[bytes] = None,
+    ) -> grpc.Channel:
+        if not host.strip():
             raise ValueError("A non empty host name is required")
-        if port <= 0:
-            raise ValueError("A non zero port is required")
+        if int(port) <= 0:
+            raise ValueError("A non zero port number is required")
 
         connection = f"{host}:{port}"
-        ca_cert = kwargs.get("ca_cert")
         if ca_cert:
+            # FIXME: we could have a secure channel without providing a CA cert
+            # we can solve this by adding a secure: bool argument
             log.debug("A CA certificate has been detected, creating a TLS channel")
             return grpc.secure_channel(
                 connection,
                 grpc.ssl_channel_credentials(ca_cert),
             )
-        client_key = kwargs.get("client_key")
-        client_cert = kwargs.get("client_cert")
-        server_cert = kwargs.get("server_cert")
+
         if client_key and client_cert and server_cert:
             log.debug(
                 "A client key, client and server certificates have been detected, \
@@ -197,5 +220,8 @@ class GrpcClient:
                 connection,
                 grpc.ssl_channel_credentials(server_cert, client_key, client_cert),
             )
+        elif any((client_cert, client_key, server_cert)):
+            raise ValueError("mTLS requires client_cert, client_key and server_cert")
+
         log.debug("No certificates detected creating an insecure connection")
         return grpc.insecure_channel(connection)
