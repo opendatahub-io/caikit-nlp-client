@@ -85,7 +85,9 @@ class HttpClient:
 
         return req_kwargs
 
-    def generate_text(self, model_id: str, text: str, **kwargs) -> str:
+    def generate_text(
+        self, model_id: str, text: str, timeout: float = 60.0, **kwargs
+    ) -> str:
         """Queries the `text-generation` endpoint for the given model_id
 
         Args:
@@ -96,6 +98,7 @@ class HttpClient:
             preserve_input_text (Bool): preserve the input text (default to False)
             max_new_tokens (int): maximum number of new tokens
             min_new_tokens (int): minimum number of new tokens
+            timeout (int): HTTP request timeout value in seconds
 
         Raises:
             ValueError: thrown if an empty model id is passed
@@ -127,7 +130,7 @@ class HttpClient:
         response = requests.post(
             self._api_url,
             json=json_input,
-            timeout=10.0,
+            timeout=timeout,
             **req_kwargs,  # type: ignore
         )
 
@@ -135,7 +138,9 @@ class HttpClient:
 
         return response.json()["generated_text"]
 
-    def generate_text_stream(self, model_id: str, text: str, **kwargs) -> Iterable[str]:
+    def generate_text_stream(
+        self, model_id: str, text: str, timeout: float = 60.0, **kwargs
+    ) -> Iterable[str]:
         """Queries the `text-generation` stream endpoint for the given model_id
 
         Args:
@@ -146,6 +151,7 @@ class HttpClient:
             preserve_input_text (Bool): preserve the input text (default to False)
             max_new_tokens (int): maximum number of new tokens
             min_new_tokens (int): minimum number of new tokens
+            timeout (int): HTTP request timeout value in seconds
 
         Raises:
             ValueError: thrown if an empty model id is passed
@@ -185,7 +191,7 @@ class HttpClient:
         response = requests.post(
             self._stream_api_url,
             json=payload,
-            timeout=10.0,
+            timeout=timeout,
             **req_kwargs,  # type: ignore
         )
 
