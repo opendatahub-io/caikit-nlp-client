@@ -37,7 +37,14 @@ def test_generate_text_with_no_model_id(http_client):
         http_client.generate_text("", "What does foobar mean?")
 
 
-def test_generate_text_stream(http_client, model_name, generated_text_stream_result):
+def test_generate_text_stream(
+    pytestconfig, http_client, model_name, generated_text_stream_result
+):
+    if not pytestconfig.option.real_caikit:
+        pytest.skip(
+            reason="stream mocking is broken, see https://github.com/opendatahub-io/caikit-nlp-client/issues/46"
+        )
+
     response = http_client.generate_text_stream(
         model_name, "What is the meaning of life?"
     )
@@ -49,8 +56,13 @@ def test_generate_text_stream(http_client, model_name, generated_text_stream_res
 
 
 def test_generate_text_stream_with_optional_args(
-    http_client, model_name, generated_text_stream_result
+    pytestconfig, http_client, model_name, generated_text_stream_result
 ):
+    if not pytestconfig.option.real_caikit:
+        pytest.skip(
+            reason="stream mocking is broken, see https://github.com/opendatahub-io/caikit-nlp-client/issues/46"
+        )
+
     response = http_client.generate_text_stream(
         model_name,
         "What is the meaning of life?",
