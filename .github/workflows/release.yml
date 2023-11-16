@@ -32,7 +32,6 @@ jobs:
       - name: Build package
         run: |
           nox -s build
-          python -m build
 
       - name: Publish package on PyPI
         if: github.event_name == 'release'
