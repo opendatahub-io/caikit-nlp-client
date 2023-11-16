@@ -1,4 +1,5 @@
 """Nox sessions."""
+import glob
 import os
 import shlex
 import sys
@@ -95,7 +96,7 @@ def activate_virtualenv_in_precommit_hooks(session: nox.Session) -> None:
                 break
 
 
-@nox.session(name="pre-commit", python=python_versions[1])
+@nox.session(name="pre-commit")
 def precommit(session: nox.Session) -> None:
     """Lint using pre-commit."""
     args = session.posargs or [
@@ -115,7 +116,7 @@ def precommit(session: nox.Session) -> None:
         activate_virtualenv_in_precommit_hooks(session)
 
 
-@nox.session(python=python_versions)
+@nox.session
 def mypy(session: nox.Session) -> None:
     """Type-check using mypy."""
     args = session.posargs or ["src", "tests"]
@@ -152,7 +153,7 @@ def tests(session: nox.Session) -> None:
             session.notify("coverage", posargs=[])
 
 
-@nox.session(python=python_versions[1])
+@nox.session
 def coverage(session: nox.Session) -> None:
     """Produce the coverage report."""
     args = session.posargs or ["report"]
@@ -165,9 +166,17 @@ def coverage(session: nox.Session) -> None:
     session.run("coverage", *args)
 
 
-@nox.session(python=python_versions[1])
+@nox.session
 def typeguard(session: nox.Session) -> None:
     """Runtime type checking using Typeguard."""
     session.install(caikit_nlp_version)
     session.install(".[tests]", "typeguard", "pygments")
     session.run("pytest", f"--typeguard-packages={package}", *session.posargs)
+
+
+@nox.session
+def build(session: nox.Session) -> None:
+    session.install("build", "setuptools", "twine")
+    session.run("python", "-m", "build")
+    dists = glob.glob("dist/*")
+    session.run("twine", "check", *dists, silent=True)
