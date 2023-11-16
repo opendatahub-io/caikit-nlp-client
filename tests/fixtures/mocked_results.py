@@ -14,6 +14,11 @@ def caikit_test_producer():
 
 
 @pytest.fixture(scope="session")
+def prompt():
+    yield "What does foobar mean?"
+
+
+@pytest.fixture(scope="session")
 def generated_text():
     yield "a symphony"
 
@@ -38,7 +43,7 @@ def generated_text_result(caikit_test_producer, generated_text):
 # FIXME: Validate text stream mocking. There's a lot of logic here.
 #        Can this be simplified?
 @pytest.fixture(scope="session")
-def generated_text_stream_result(caikit_test_producer, generated_text):
+def generated_text_stream_result(caikit_test_producer, generated_text, prompt):
     from caikit.interfaces.nlp.data_model.text_generation import (
         FinishReason,
         GeneratedTextStreamResult,
@@ -46,14 +51,16 @@ def generated_text_stream_result(caikit_test_producer, generated_text):
         TokenStreamDetails,
     )
 
-    split_text = ["", "life", " is", " ", "a", " state", " of", " being", ""]
+    token_list = [GeneratedToken(text=prompt, logprob=0.42)]
+    input_token_count = len(token_list)
 
-    # TODO: validate token_list
-    token_list = [GeneratedToken(text="dummy generated token value", logprob=0.42)]
-    input_token_count = len(split_text)
+    generated_tokens = ["", "", "a", " ", "s", "y", "m", "phon", "y", ""]
+    assert (
+        "".join(generated_tokens) == generated_text
+    ), "generated_tokens should match the generated_text"
 
     result = []
-    for text in split_text:
+    for token in generated_tokens:
         details = TokenStreamDetails(
             finish_reason=FinishReason.NOT_FINISHED,
             generated_tokens=42,  # FIXME: is this correct?
@@ -62,7 +69,7 @@ def generated_text_stream_result(caikit_test_producer, generated_text):
         )
 
         stream_result = GeneratedTextStreamResult(
-            generated_text=text,
+            generated_text=token,
             tokens=token_list,
             details=details,
         )
