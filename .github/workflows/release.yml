@@ -12,6 +12,9 @@ jobs:
     permissions:
       id-token: write
 
+    env:
+      FORCE_COLOR: "1"
+
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
