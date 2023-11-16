@@ -1,3 +1,5 @@
+/src/caikit_nlp_client/_version.py
+
 .idea
 __pycache__/
 *.py[cod]

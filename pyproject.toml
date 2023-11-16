@@ -1,6 +1,9 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=61", "setuptools_scm[toml]>=7"]
+requires = [
+    "setuptools>=60",
+    "setuptools-scm>=8.0",
+]
 
 
 [project]
@@ -35,6 +38,9 @@ dependencies = [
 where = ["src"]
 exclude = ["tests", "tests.*"]
 namespaces = false
+
+[tool.setuptools_scm]
+version_file = "src/caikit_nlp_client/_version.py"
 
 [project.optional-dependencies]
 dev = [
