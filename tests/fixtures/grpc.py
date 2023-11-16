@@ -15,7 +15,6 @@ def channel_factory(
     ca_cert: Optional[bytes] = None,
     client_key: Optional[bytes] = None,
     client_cert: Optional[bytes] = None,
-    server_cert: Optional[bytes] = None,
 ) -> grpc.Channel:
     connection = f"{host}:{port}"
     if connection_type is ConnectionType.INSECURE:
@@ -28,7 +27,7 @@ def channel_factory(
     if connection_type is ConnectionType.MTLS:
         return grpc.secure_channel(
             connection,
-            grpc.ssl_channel_credentials(server_cert, client_key, client_cert),
+            grpc.ssl_channel_credentials(ca_cert, client_key, client_cert),
         )
 
 
@@ -45,7 +44,6 @@ def grpc_client(
     ca_cert,
     client_key,
     client_cert,
-    server_cert,
 ) -> GrpcClient:
     if connection_type is ConnectionType.INSECURE:
         return GrpcClient(*grpc_server, insecure=True)
@@ -56,7 +54,7 @@ def grpc_client(
     if connection_type is ConnectionType.MTLS:
         return GrpcClient(
             *grpc_server,
-            server_cert=server_cert,
+            ca_cert=ca_cert,
             client_key=client_key,
             client_cert=client_cert,
         )
@@ -89,7 +87,6 @@ def grpc_server(
     ca_cert,
     client_key,
     client_cert,
-    server_cert,
 ):
     if pytestconfig.option.real_caikit:
         if connection_type is not ConnectionType.INSECURE:
@@ -107,7 +104,6 @@ def grpc_server(
             }
         elif connection_type is ConnectionType.MTLS:
             kwargs = {
-                "server_cert": server_cert,
                 "client_cert": client_cert,
                 "client_key": client_key,
                 "ca_cert": ca_cert,

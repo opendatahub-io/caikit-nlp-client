@@ -31,7 +31,6 @@ class GrpcClient:
         ca_cert: Optional[bytes] = None,
         client_key: Optional[bytes] = None,
         client_cert: Optional[bytes] = None,
-        server_cert: Optional[bytes] = None,
     ) -> None:
         """Client class for a Caikit NLP grpc server
 
@@ -49,7 +48,6 @@ class GrpcClient:
             insecure=insecure,
             client_key=client_key,
             client_cert=client_cert,
-            server_cert=server_cert,
             ca_cert=ca_cert,
         )
         self._reflection_db = ProtoReflectionDescriptorDatabase(self._channel)
@@ -197,7 +195,6 @@ class GrpcClient:
         ca_cert: Optional[bytes] = None,
         client_key: Optional[bytes] = None,
         client_cert: Optional[bytes] = None,
-        server_cert: Optional[bytes] = None,
     ) -> grpc.Channel:
         if not host.strip():
             raise ValueError("A non empty host name is required")
@@ -210,21 +207,18 @@ class GrpcClient:
             return grpc.insecure_channel(connection)
 
         credentials_kwargs: dict[str, bytes] = {}
-        if ca_cert:
+        if ca_cert and not (any((client_cert, client_key))):
             log.info("Connecting using provided CA certificate for secure channel")
             credentials_kwargs.update(root_certificates=ca_cert)
-
-        if client_key and client_cert and server_cert:
+        elif client_cert and client_key and ca_cert:
             log.info("Connecting using mTLS for secure channel")
-            # TODO: check if server_cert has the same meaning as ca_cert, and get
-            # rid of it if so
             credentials_kwargs.update(
-                root_certificates=server_cert,
+                root_certificates=ca_cert,
                 private_key=client_key,
                 certificate_chain=client_cert,
             )
-        elif any((client_cert, client_key, server_cert)):
-            raise ValueError("mTLS requires client_cert, client_key and server_cert")
+        else:
+            raise ValueError("mTLS requires client_cert, client_key and ca_cert")
 
         return grpc.secure_channel(
             connection,
