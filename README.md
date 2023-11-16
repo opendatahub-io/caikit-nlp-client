@@ -1,6 +1,9 @@
 # caikit-nlp-client
 
-A client library for [`caikit-nlp`](https://github.com/caikit/caikit-nlp)
+[![PyPI version](https://badge.fury.io/py/caikit-nlp-client.svg)](https://badge.fury.io/py/caikit-nlp-client)
+[![Tests](https://github.com/opendatahub-io/caikit-nlp-client/actions/workflows/tests.yml/badge.svg)](https://github.com/opendatahub-io/caikit-nlp-client/actions/workflows/tests.yml)
+
+A client library for [caikit-nlp](https://github.com/caikit/caikit-nlp)
 
 ## Installation
 
