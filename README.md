@@ -2,6 +2,92 @@
 
 A client library for [`caikit-nlp`](https://github.com/caikit/caikit-nlp)
 
+## Installation
+
+Install from [PyPi](https://pypi.org/project/caikit-nlp-client/)
+
+```bash
+pip install caikit-nlp-client
+```
+
+## Usage
+
+A few examples follow, see [`example.py`](/examples/example.py)
+
+### http
+
+To use the http protocol
+
+```python
+from caikit_nlp_client import HttpClient
+
+host = "localhost"
+port = 8080
+model_name = "flan-t5-small-caikit"
+http_client = HttpClient(f"http://{host}:{port}")
+
+text = http_client.generate_text(model_name, "What is the boiling point of Nitrogen?")
+```
+
+### gRPC
+
+To use the gRPC protocol
+
+```python
+from caikit_nlp_client import GrpcClient
+
+host = "localhost"
+port = 8085
+model_name = "flan-t5-small-caikit"
+grpc_client = GrpcClient(f"http://{host}:{port}", insecure=True)
+# or, with https:
+grpc_client = GrpcClient(f"https://{host}:{port}")
+
+text = grpc_client.generate_text(model_name, "What is the boiling point of Nitrogen?")
+```
+
+### Self-signed certificates
+
+To use a self signed certificate, assuming we have a certificate authority cert `ca.pem`
+
+```python
+http_client = HttpClient(f"https://{host}:{http_port}", ca_cert_path="ca.pem")
+
+with open("ca.pem", "rb") as fh:
+    ca_cert = fh.read()
+grpc_client = GrpcClient(host, grpc_port, ca_cert=ca_cert)
+```
+
+### mTLS
+
+Assuming we have a `client.pem` and `client-key.pem` certificate files, and we require `ca.pem` to validate the server certificate:
+
+```python
+# http
+http_client = HttpClient(
+    f"https://{host}:{http_port}",
+    ca_cert_path="ca.pem",
+    client_cert_path="client.pem",
+    client_key_path="client-key.pem"
+)
+
+# grpc
+with open("ca.pem", "rb") as fh:
+    ca_cert = fh.read()
+with open("client.pem", "rb") as fh:
+    client_cert = fh.read()
+with open("client-key.pem", "rb") as fh:
+    client_key = fh.read()
+
+grpc_client = GrpcClient(
+    host,
+    port,
+    ca_cert=ca_cert,
+    client_key=client_key,
+    client_cert
+)
+```
+
 ## Contributing
 
 Set up [`pre-commit`](https://pre-commit.com) for linting/style/misc fixes:
