@@ -56,7 +56,3 @@ http_client = HttpClient(f"https://{host}:{http_port}", ca_cert_path="ca.pem")
 with open("ca.pem", "rb") as fh:
     ca_cert = fh.read()
 grpc_client = GrpcClient(host, grpc_port, ca_cert=ca_cert)
-
-
-# mTLS
-# TODO
