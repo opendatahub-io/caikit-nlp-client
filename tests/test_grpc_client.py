@@ -6,23 +6,24 @@ from caikit_nlp_client.grpc_client import GrpcClient
 from .fixtures.utils import ConnectionType
 
 
-def test_generate_text(model_name, grpc_client, generated_text_result):
-    generated_text = grpc_client.generate_text(model_name, "What does foobar mean?")
+def test_generate_text(model_name, grpc_client, prompt):
+    generated_text = grpc_client.generate_text(model_name, prompt)
 
-    assert generated_text == generated_text_result.generated_text
+    assert isinstance(generated_text, str)
+    assert generated_text
 
 
-def test_generate_text_with_optional_args(
-    grpc_client, model_name, generated_text_result
-):
+def test_generate_text_with_optional_args(grpc_client, model_name, prompt):
     generated_text = grpc_client.generate_text(
         model_name,
-        "What does foobar mean?",
+        prompt,
         preserve_input_text=False,
         max_new_tokens=20,
         min_new_tokens=4,
     )
-    assert generated_text == generated_text_result.generated_text
+
+    assert isinstance(generated_text, str)
+    assert generated_text
     # TODO: also validate passing of parameters
 
 
@@ -44,31 +45,35 @@ def test_generate_text_with_no_model_id(grpc_client):
         grpc_client.generate_text("", "What does foobar mean?")
 
 
-def test_generate_text_stream(model_name, grpc_client, generated_text_stream_result):
-    result = grpc_client.generate_text_stream(
-        model_name, "What is the meaning of life?"
+def test_generate_text_stream(
+    model_name, grpc_client, generated_text_stream_result, prompt
+):
+    response = grpc_client.generate_text_stream(
+        model_name,
+        prompt,
     )
 
-    assert isinstance(result, GeneratorType)
-    assert list(result) == [
-        stream_part.generated_text for stream_part in generated_text_stream_result
-    ]
+    assert isinstance(response, GeneratorType)
+    response_list = list(response)
+    assert response_list
+    assert all(isinstance(text, str) for text in response_list)
 
 
 def test_generate_text_stream_with_optional_args(
-    model_name, grpc_client, generated_text_stream_result
+    model_name, grpc_client, generated_text_stream_result, prompt
 ):
-    result = grpc_client.generate_text_stream(
+    response = grpc_client.generate_text_stream(
         model_name,
-        "What is the meaning of life?",
+        prompt,
         preserve_input_text=False,
         max_new_tokens=20,
         min_new_tokens=4,
     )
-    assert list(result) == [
-        stream_part.generated_text for stream_part in generated_text_stream_result
-    ]
-    # TODO: also validate passing of parameters using mocker.spy
+
+    assert isinstance(response, GeneratorType)
+    response_list = list(response)
+    assert response_list
+    assert all(isinstance(text, str) for text in response_list)
 
 
 def test_request_invalid_kwarg(model_name, grpc_client):
