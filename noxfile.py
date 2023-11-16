@@ -11,11 +11,8 @@ import nox
 package = "caikit_nlp_client"
 python_versions = ["3.11", "3.10", "3.9"]
 nox.needs_version = ">= 2021.6.6"
-nox.options.sessions = (
-    "pre-commit",
-    "mypy",
-    "tests",
-)
+nox.options.sessions = ("pre-commit", "mypy", "tests", "build")
+
 
 # see note regarding caikit_nlp in pyproject.toml
 caikit_nlp_version = "caikit-nlp @ git+https://github.com/caikit/caikit-nlp@0.3.0"
