@@ -15,7 +15,6 @@ nox.options.sessions = (
     "pre-commit",
     "mypy",
     "tests",
-    "typeguard",
 )
 
 # see note regarding caikit_nlp in pyproject.toml
@@ -164,14 +163,6 @@ def coverage(session: nox.Session) -> None:
         session.run("coverage", "combine")
 
     session.run("coverage", *args)
-
-
-@nox.session
-def typeguard(session: nox.Session) -> None:
-    """Runtime type checking using Typeguard."""
-    session.install(caikit_nlp_version)
-    session.install(".[tests]", "typeguard", "pygments")
-    session.run("pytest", f"--typeguard-packages={package}", *session.posargs)
 
 
 @nox.session
