@@ -14,17 +14,15 @@ concurrency:
 
 jobs:
   tests:
-    name: ${{ matrix.session }} ${{ matrix.python }} / ${{ matrix.os }}
+    name: ${{ matrix.python }} / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
         python: ["3.11"]
-        session: ["tests"]
 
     env:
-      NOXSESSION: ${{ matrix.session }}
       FORCE_COLOR: "1"
       PRE_COMMIT_COLOR: "always"
 
@@ -47,12 +45,12 @@ jobs:
           pip install nox
           nox --version
 
-      - name: Run Nox
+      - name: Run tests
         run: |
-          nox --python=${{ matrix.python }} --session ${{ matrix.session }} -- --real-caikit
+          nox --session tests-${{ matrix.python }} -- --real-caikit
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v3.1.4
-        if: always() && matrix.session == 'tests'
+        if: always()
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
