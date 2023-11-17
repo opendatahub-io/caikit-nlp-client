@@ -136,11 +136,9 @@ def tests(session: nox.Session) -> None:
     session.install(".[tests]")
     try:
         session.run(
-            "coverage",
-            "run",
-            "--parallel",
-            "-m",
             "pytest",
+            "--cov",
+            "--cov-config=pyproject.toml",
             *session.posargs,
             env={"COVERAGE_FILE": f".coverage.{session.python}"},
         )
