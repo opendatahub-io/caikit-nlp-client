@@ -1,0 +1,16 @@
+{
+  "CN": "Openshift.ai Test CA",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Raleigh",
+      "O": "Openshift.ai",
+      "OU": "CertificateAuthority",
+      "ST": "North Carolina"
+    }
+  ]
+}
