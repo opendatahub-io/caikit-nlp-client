@@ -45,7 +45,7 @@ version_file = "src/caikit_nlp_client/_version.py"
 [project.optional-dependencies]
 dev = [
     "ruff==0.1.6",
-    "grpcio-tools==1.59.2",
+    "grpcio-tools==1.59.3",
     "caikit_nlp_client[types]"
 ]
 types = [
