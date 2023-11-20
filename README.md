@@ -2,6 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/caikit-nlp-client.svg)](https://badge.fury.io/py/caikit-nlp-client)
 [![Tests](https://github.com/opendatahub-io/caikit-nlp-client/actions/workflows/tests.yml/badge.svg)](https://github.com/opendatahub-io/caikit-nlp-client/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/opendatahub-io/caikit-nlp-client/graph/badge.svg?token=6LYJLZDO52)](https://codecov.io/gh/opendatahub-io/caikit-nlp-client)
 
 A client library for [caikit-nlp](https://github.com/caikit/caikit-nlp)
 
