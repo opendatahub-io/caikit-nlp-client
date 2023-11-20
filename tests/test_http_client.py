@@ -130,8 +130,8 @@ def test_client_instantiation(
     # MTLS tests
     with pytest.raises(
         ValueError,
-        match="Must provide both ca_cert_path, client_cert_path, \
-            client_key_path for mTLS",
+        match="Must provide both ca_cert_path, client_cert_path, client_key_path for "
+        "mTLS",
     ):
         HttpClient(
             "https://localhost:8080",

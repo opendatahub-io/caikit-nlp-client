@@ -64,8 +64,8 @@ class HttpClient:
             and not self._mtls_configured
         ):
             raise ValueError(
-                "Must provide both ca_cert_path, client_cert_path, \
-                    client_key_path for mTLS"
+                "Must provide both ca_cert_path, client_cert_path, client_key_path "
+                "for mTLS"
             )
 
     @property
