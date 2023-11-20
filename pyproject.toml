@@ -30,7 +30,7 @@ authors = [
 requires-python = ">=3.9"
 
 dependencies = [
-    "grpcio-reflection==1.59.2",
+    "grpcio-reflection==1.59.3",
     "requests==2.31.0"
 ]
 
