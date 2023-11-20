@@ -58,17 +58,19 @@ class HttpClient:
                 (
                     self._client_key_path,
                     self._client_cert_path,
+                    self._ca_cert_path,
                 )
             )
             and not self._mtls_configured
         ):
             raise ValueError(
-                "Must provide both client_cert_path and client_key_path for mTLS"
+                "Must provide both ca_cert_path, client_cert_path, \
+                    client_key_path for mTLS"
             )
 
     @property
     def _mtls_configured(self):
-        return all((self._client_key_path, self._client_cert_path))
+        return all((self._client_key_path, self._client_cert_path, self._ca_cert_path))
 
     def _get_tls_configuration(self) -> dict[str, Union[str, tuple[str, str]]]:
         req_kwargs: dict[str, Union[str, tuple[str, str]]] = {}

@@ -34,16 +34,17 @@ def http_client(
 
     if connection_type is ConnectionType.INSECURE:
         url = f"http://{host}:{port}"
-    elif connection_type in (ConnectionType.TLS, ConnectionType.MTLS):
+    elif connection_type is ConnectionType.TLS:
+        # a valid certificate autority should validate the response with no extra args
+        url = f"https://{host}:{port}"
+
+    elif ConnectionType.MTLS:
         url = f"https://{host}:{port}"
         kwargs.update(
-            ca_cert_path=ca_cert_file
-        )  # FIXME: could handle as a monkeypatch of REQUESTS_CA_BUNDLE
-        if connection_type is ConnectionType.MTLS:
-            kwargs.update(
-                client_cert_path=client_cert_file,
-                client_key_path=client_key_file,
-            )
+            ca_cert_path=ca_cert_file,
+            client_cert_path=client_cert_file,
+            client_key_path=client_key_file,
+        )
     else:
         raise ValueError(f"invalid {connection_type=}")
 
