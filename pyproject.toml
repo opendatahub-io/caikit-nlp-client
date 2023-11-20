@@ -10,9 +10,7 @@ requires = [
 name = "caikit_nlp_client"
 dynamic = ["version"]
 description = "caikit-nlp client"
-# license =  "Apache-2.0"
 license = { text = "Apache License 2.0" }
-
 readme = "README.md"
 classifiers=[
     "License :: OSI Approved :: Apache Software License",
@@ -33,6 +31,9 @@ dependencies = [
     "grpcio-reflection==1.59.3",
     "requests==2.31.0"
 ]
+
+[project.urls]
+Source = "https://github.com/opendatahub-io/caikit-nlp-client/"
 
 [tool.setuptools.packages.find]
 where = ["src"]
