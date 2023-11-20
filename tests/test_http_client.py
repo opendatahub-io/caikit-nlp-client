@@ -7,33 +7,48 @@ from requests.exceptions import SSLError
 from .conftest import ConnectionType
 
 
-def test_generate_text(http_client, model_name, prompt, mocker):
-    import requests
+def test_generate_text(
+    http_client, model_name, prompt, mocker, monkeysession, ca_cert_file
+):
+    with monkeysession.context() as monkeypatch:
+        monkeypatch.setenv("REQUESTS_CA_BUNDLE", ca_cert_file)
+        import requests
 
-    mock = mocker.spy(requests, "post")
-
-    generated_text = http_client.generate_text(model_name, prompt)
-
-    assert isinstance(generated_text, str)
-    assert generated_text
-    assert "timeout" in mock.call_args_list[0].kwargs
+        mock = mocker.spy(requests, "post")
+        generated_text = http_client.generate_text(model_name, prompt)
+        assert isinstance(generated_text, str)
+        assert generated_text
+        assert "timeout" in mock.call_args_list[0].kwargs
 
 
 def test_generate_text_with_optional_args(
-    http_client, model_name, generated_text_result, prompt, mocker
+    http_client,
+    model_name,
+    generated_text_result,
+    prompt,
+    mocker,
+    monkeysession,
+    ca_cert_file,
 ):
-    import requests
+    with monkeysession.context() as monkeypatch:
+        monkeypatch.setenv("REQUESTS_CA_BUNDLE", ca_cert_file)
+        import requests
 
-    mock = mocker.spy(requests, "post")
+        mock = mocker.spy(requests, "post")
 
-    generated_text = http_client.generate_text(
-        model_name, prompt, timeout=42.0, max_new_tokens=20, min_new_tokens=4
-    )
+        generated_text = http_client.generate_text(
+            model_name, prompt, timeout=42.0, max_new_tokens=20, min_new_tokens=4
+        )
 
-    assert isinstance(generated_text, str)
-    assert generated_text
-    assert mock.call_args_list[-1].kwargs["timeout"] == 42.0
-    # TODO: also validate passing of parameters using mocker.spy
+        assert isinstance(generated_text, str)
+        assert generated_text
+        assert mock.call_args_list[-1].kwargs["timeout"] == 42.0
+        assert (
+            mock.call_args_list[-1].kwargs["json"]["parameters"]["max_new_tokens"] == 20
+        )
+        assert (
+            mock.call_args_list[-1].kwargs["json"]["parameters"]["min_new_tokens"] == 4
+        )
 
 
 def test_generate_text_with_no_model_id(http_client):
@@ -103,3 +118,33 @@ def test_tls_enabled(
         monkeypatch.setenv("REQUESTS_CA_BUNDLE", ca_cert_file)
 
         assert http_client.generate_text(model_name, "dummy text")
+
+
+@pytest.mark.parametrize("connection_type", [ConnectionType.MTLS], indirect=True)
+def test_client_instantiation(
+    ca_cert_file,
+    client_key_file,
+    client_cert_file,
+    connection_type,
+):
+    # MTLS tests
+    with pytest.raises(
+        ValueError,
+        match="Must provide both ca_cert_path, client_cert_path, \
+            client_key_path for mTLS",
+    ):
+        HttpClient(
+            "https://localhost:8080",
+            ca_cert_path=ca_cert_file,
+            client_cert_path=client_cert_file,
+        )
+        HttpClient(
+            "https://localhost:8080",
+            ca_cert_path=ca_cert_file,
+            client_key_path=client_key_file,
+        )
+        HttpClient(
+            "https://localhost:8080",
+            client_cert_path=client_cert_file,
+            client_key_path=client_key_file,
+        )
