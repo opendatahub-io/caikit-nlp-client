@@ -50,6 +50,16 @@ grpc_client = GrpcClient(f"https://{host}:{port}")
 text = grpc_client.generate_text(model_name, "What is the boiling point of Nitrogen?")
 ```
 
+Text generation methods may accept text generation parameters, which can be provided as kwargs
+to `generate_text` and `generate_text_stream`.
+
+Available values and types be retrieved as a dict for both the grpc and http clients:
+
+```python
+for param, default_value in client.get_text_generation_parameters():
+    print(f"{param=}, {default_value=}")
+```
+
 ### Self-signed certificates
 
 To use a self signed certificate, assuming we have a certificate authority cert `ca.pem`
