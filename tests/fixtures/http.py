@@ -56,6 +56,15 @@ def http_client(
     return HttpClient(url, **kwargs)
 
 
+@pytest.fixture(scope="function")
+def accept_self_signed_certs(ca_cert_file, monkeysession):
+    """validates self signed certs by injecting REQUEST_CA_BUNDLE"""
+    with monkeysession.context() as monkeypatch:
+        monkeypatch.setenv("REQUESTS_CA_BUNDLE", ca_cert_file)
+
+        yield
+
+
 @pytest.fixture(scope="session")
 def http_server_thread(
     caikit_nlp_runtime,

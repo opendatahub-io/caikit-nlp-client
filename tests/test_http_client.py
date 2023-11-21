@@ -1,6 +1,7 @@
 from types import GeneratorType
 
 import pytest
+import requests
 from caikit_nlp_client import HttpClient
 from requests.exceptions import SSLError
 
@@ -8,17 +9,11 @@ from .conftest import ConnectionType
 
 
 def test_generate_text(
-    http_client, model_name, prompt, mocker, monkeysession, ca_cert_file
+    http_client, model_name, prompt, mocker, accept_self_signed_certs
 ):
-    with monkeysession.context() as monkeypatch:
-        monkeypatch.setenv("REQUESTS_CA_BUNDLE", ca_cert_file)
-        import requests
-
-        mock = mocker.spy(requests, "post")
-        generated_text = http_client.generate_text(model_name, prompt)
-        assert isinstance(generated_text, str)
-        assert generated_text
-        assert "timeout" in mock.call_args_list[0].kwargs
+    generated_text = http_client.generate_text(model_name, prompt)
+    assert isinstance(generated_text, str)
+    assert generated_text
 
 
 def test_generate_text_with_optional_args(
@@ -27,28 +22,30 @@ def test_generate_text_with_optional_args(
     generated_text_result,
     prompt,
     mocker,
-    monkeysession,
-    ca_cert_file,
+    accept_self_signed_certs,
 ):
-    with monkeysession.context() as monkeypatch:
-        monkeypatch.setenv("REQUESTS_CA_BUNDLE", ca_cert_file)
-        import requests
+    mock = mocker.spy(requests, "post")
 
-        mock = mocker.spy(requests, "post")
+    generated_text = http_client.generate_text(
+        model_name, prompt, max_new_tokens=20, min_new_tokens=4
+    )
 
-        generated_text = http_client.generate_text(
-            model_name, prompt, timeout=42.0, max_new_tokens=20, min_new_tokens=4
-        )
+    assert isinstance(generated_text, str)
+    assert generated_text
+    assert mock.call_args_list[-1].kwargs["json"]["parameters"]["max_new_tokens"] == 20
+    assert mock.call_args_list[-1].kwargs["json"]["parameters"]["min_new_tokens"] == 4
 
-        assert isinstance(generated_text, str)
-        assert generated_text
-        assert mock.call_args_list[-1].kwargs["timeout"] == 42.0
-        assert (
-            mock.call_args_list[-1].kwargs["json"]["parameters"]["max_new_tokens"] == 20
-        )
-        assert (
-            mock.call_args_list[-1].kwargs["json"]["parameters"]["min_new_tokens"] == 4
-        )
+
+def test_timeout_kwarg(
+    http_client, model_name, prompt, mocker, accept_self_signed_certs
+):
+    mock = mocker.spy(requests, "post")
+
+    http_client.generate_text(model_name, prompt)
+    assert mock.call_args_list[-1].kwargs["timeout"] == 60.0
+
+    http_client.generate_text(model_name, prompt, timeout=42.0)
+    assert mock.call_args_list[-1].kwargs["timeout"] == 42.0
 
 
 def test_generate_text_with_no_model_id(http_client):
@@ -57,7 +54,12 @@ def test_generate_text_with_no_model_id(http_client):
 
 
 def test_generate_text_stream(
-    pytestconfig, http_client, model_name, generated_text_stream_result, prompt
+    pytestconfig,
+    http_client,
+    model_name,
+    generated_text_stream_result,
+    prompt,
+    accept_self_signed_certs,
 ):
     if not pytestconfig.option.real_caikit:
         pytest.skip(
@@ -76,13 +78,20 @@ def test_generate_text_stream(
 
 
 def test_generate_text_stream_with_optional_args(
-    pytestconfig, http_client, model_name, generated_text_stream_result, prompt
+    pytestconfig,
+    http_client,
+    model_name,
+    generated_text_stream_result,
+    prompt,
+    accept_self_signed_certs,
+    mocker,
 ):
     if not pytestconfig.option.real_caikit:
         pytest.skip(
             reason="stream mocking is broken, see https://github.com/opendatahub-io/caikit-nlp-client/issues/46"
         )
 
+    mock = mocker.spy(requests, "post")
     response = http_client.generate_text_stream(
         model_name,
         prompt,
@@ -95,7 +104,32 @@ def test_generate_text_stream_with_optional_args(
     response_list = list(response)
     assert response_list
     assert all(isinstance(text, str) for text in response_list)
-    # TODO: verify passing of parameters using mocker.spy
+    assert mock.call_args_list[-1].kwargs["json"]["parameters"]["max_new_tokens"] == 20
+    assert mock.call_args_list[-1].kwargs["json"]["parameters"]["min_new_tokens"] == 4
+
+
+def test_get_text_generation_parameters(
+    http_client, monkeysession, accept_self_signed_certs
+):
+    assert http_client.get_text_generation_parameters() == {
+        "max_new_tokens": "integer",
+        "min_new_tokens": "integer",
+        "truncate_input_tokens": "integer",
+        "decoding_method": "string",
+        "top_k": "integer",
+        "top_p": "number",
+        "typical_p": "number",
+        "temperature": "number",
+        "repetition_penalty": "number",
+        "max_time": "number",
+        "exponential_decay_length_penalty": {
+            "start_index": "integer",
+            "decay_factor": "number",
+        },
+        "stop_sequences": "array",
+        "seed": "integer",
+        "preserve_input_text": "boolean",
+    }
 
 
 @pytest.mark.parametrize("connection_type", [ConnectionType.TLS], indirect=True)
@@ -148,28 +182,3 @@ def test_client_instantiation(
             client_cert_path=client_cert_file,
             client_key_path=client_key_file,
         )
-
-
-def test_get_text_generation_parameters(http_client, monkeysession, ca_cert_file):
-    with monkeysession.context() as monkeypatch:
-        monkeypatch.setenv("REQUESTS_CA_BUNDLE", ca_cert_file)
-
-        assert http_client.get_text_generation_parameters() == {
-            "max_new_tokens": "integer",
-            "min_new_tokens": "integer",
-            "truncate_input_tokens": "integer",
-            "decoding_method": "string",
-            "top_k": "integer",
-            "top_p": "number",
-            "typical_p": "number",
-            "temperature": "number",
-            "repetition_penalty": "number",
-            "max_time": "number",
-            "exponential_decay_length_penalty": {
-                "start_index": "integer",
-                "decay_factor": "number",
-            },
-            "stop_sequences": "array",
-            "seed": "integer",
-            "preserve_input_text": "boolean",
-        }
