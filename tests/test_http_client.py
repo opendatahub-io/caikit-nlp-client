@@ -148,3 +148,28 @@ def test_client_instantiation(
             client_cert_path=client_cert_file,
             client_key_path=client_key_file,
         )
+
+
+def test_get_text_generation_parameters(http_client, monkeysession, ca_cert_file):
+    with monkeysession.context() as monkeypatch:
+        monkeypatch.setenv("REQUESTS_CA_BUNDLE", ca_cert_file)
+
+        assert http_client.get_text_generation_parameters() == {
+            "max_new_tokens": "integer",
+            "min_new_tokens": "integer",
+            "truncate_input_tokens": "integer",
+            "decoding_method": "string",
+            "top_k": "integer",
+            "top_p": "number",
+            "typical_p": "number",
+            "temperature": "number",
+            "repetition_penalty": "number",
+            "max_time": "number",
+            "exponential_decay_length_penalty": {
+                "start_index": "integer",
+                "decay_factor": "number",
+            },
+            "stop_sequences": "array",
+            "seed": "integer",
+            "preserve_input_text": "boolean",
+        }
