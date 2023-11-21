@@ -47,6 +47,7 @@ class HttpClient:
             "/api/v1/task/server-streaming-text-generation"
         )
 
+        self._api_base = base_url
         self._api_url = f"{base_url}{text_generation_endpoint}"
         self._stream_api_url = f"{base_url}{text_generation_stream_endpoint}"
 
@@ -86,6 +87,36 @@ class HttpClient:
             req_kwargs["verify"] = self._ca_cert_path
 
         return req_kwargs
+
+    def get_text_generation_parameters(self, timeout: float = 60.0) -> dict[str, str]:
+        """returns a dict with available fields and their type"""
+        req_kwargs = self._get_tls_configuration()
+
+        openapi_spec = requests.get(
+            f"{self._api_base}/openapi.json",
+            timeout=timeout,
+            **req_kwargs,  # type: ignore
+        ).json()
+
+        request_schema = openapi_spec["paths"]["/api/v1/task/text-generation"]["post"][
+            "requestBody"
+        ]["content"]["application/json"]["schema"]
+        parameters = request_schema["properties"]["parameters"]
+
+        def simplify_parameter_schema(parameters: dict) -> dict:
+            """recursively flattens openapi's spec into a human-friendly dict"""
+            assert not len(parameters) > 1, "parameters should be a list of 1 dict 🤷"
+
+            flattened = {}
+            for param, description in parameters["allOf"][0]["properties"].items():
+                if "allOf" in description:
+                    flattened[param] = simplify_parameter_schema(description)
+                else:
+                    flattened[param] = description["type"]
+
+            return flattened
+
+        return simplify_parameter_schema(parameters)
 
     def generate_text(
         self, model_id: str, text: str, timeout: float = 60.0, **kwargs
