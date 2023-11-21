@@ -1,9 +1,9 @@
 import logging
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
-    from google._upb._message import Message
+    from google._upb._message import Descriptor, Message
 
 import grpc
 from google.protobuf.descriptor_pool import DescriptorPool
@@ -125,6 +125,35 @@ class GrpcClient:
         result = response.generated_text
         log.info("Calling generate_text was successful")
         return result
+
+    def get_text_generation_parameters(self) -> dict[str, Any]:
+        """returns a dict with available fields and their type"""
+        descriptor: Descriptor = self._task_text_generation_request.DESCRIPTOR
+
+        # hack: used map the grpc type (int) to a human-readable string
+        grpc_type_to_str = {
+            getattr(descriptor.fields[0], t): t.split("_")[1].lower()
+            for t in dir(descriptor.fields[0])
+            if t.startswith("TYPE_")
+        }
+
+        def simplify_descriptor(
+            descriptor: "Descriptor",
+        ) -> dict:
+            """recursively flattens grpc descriptor into a human-friendly dict"""
+
+            flattened: dict = {}
+            for field in descriptor.fields:
+                string_type = grpc_type_to_str[field.type]
+
+                if field.message_type:
+                    flattened[field.name] = simplify_descriptor(field.message_type)
+                else:
+                    flattened[field.name] = string_type
+
+            return flattened
+
+        return simplify_descriptor(descriptor)
 
     def __enter__(self):
         return self

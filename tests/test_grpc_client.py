@@ -125,3 +125,26 @@ def test_request_exception_handling(
         match=match_stream,
     ):
         list(streaming_response)
+
+
+def test_get_text_generation_parameters(grpc_client):
+    assert grpc_client.get_text_generation_parameters() == {
+        "text": "string",
+        "max_new_tokens": "int64",
+        "min_new_tokens": "int64",
+        "truncate_input_tokens": "int64",
+        "decoding_method": "string",
+        "top_k": "int64",
+        "top_p": "double",
+        "typical_p": "double",
+        "temperature": "double",
+        "seed": "uint64",
+        "repetition_penalty": "double",
+        "max_time": "double",
+        "exponential_decay_length_penalty": {
+            "start_index": "int64",
+            "decay_factor": "double",
+        },
+        "stop_sequences": "string",
+        "preserve_input_text": "bool",
+    }
