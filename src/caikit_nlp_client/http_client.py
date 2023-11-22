@@ -166,10 +166,15 @@ class HttpClient:
             timeout=timeout,
             **req_kwargs,  # type: ignore
         )
-
-        response.raise_for_status()  # TODO
-
-        return response.json()["generated_text"]
+        log.debug(f"Response: {response}")
+        if response.status_code == 200:
+            return response.json()["generated_text"]
+        elif 400 <= response.status_code < 500:
+            raise RuntimeError(response.json()["details"])
+        else:
+            raise RuntimeError(
+                f"{response.status_code}: Server error {response.reason}"
+            )
 
     def generate_text_stream(
         self, model_id: str, text: str, timeout: float = 60.0, **kwargs
@@ -227,7 +232,7 @@ class HttpClient:
             timeout=timeout,
             **req_kwargs,  # type: ignore
         )
-
+        log.debug(f"Response: {response}")
         buffer: list[bytes] = []
         for line in response.iter_lines():
             if line:
@@ -242,10 +247,18 @@ class HttpClient:
                 continue
 
             buffer.clear()
+            if "details" in message and "code" in message:
+                details = message["details"]
+                raise RuntimeError(f"Exception iterating responses: {details}")
             yield message["generated_text"]
 
         if buffer:
             final_message = json.loads(b"".join(buffer))
+            if "details" in final_message and "code" in final_message:
+                raise RuntimeError(
+                    "Exception iterating responses: {}".format(final_message["details"])
+                )
+
             yield final_message["generated_text"]
 
     def _create_json_request(self, model_id, text, **kwargs) -> dict[str, Any]:
