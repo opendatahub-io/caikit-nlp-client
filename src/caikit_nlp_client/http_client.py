@@ -248,8 +248,9 @@ class HttpClient:
 
             buffer.clear()
             if "details" in message and "code" in message:
-                details = message["details"]
-                raise RuntimeError(f"Exception iterating responses: {details}")
+                raise RuntimeError(
+                    "Exception iterating responses: {}".format(message["details"])
+                )
             yield message["generated_text"]
 
         if buffer:
@@ -258,8 +259,12 @@ class HttpClient:
                 raise RuntimeError(
                     "Exception iterating responses: {}".format(final_message["details"])
                 )
-
-            yield final_message["generated_text"]
+            try:
+                yield final_message["generated_text"]
+            except KeyError as exc:
+                raise RuntimeError(
+                    "Unexpected response from the server: generated text is missing"
+                ) from exc
 
     def _create_json_request(self, model_id, text, **kwargs) -> dict[str, Any]:
         json_input = {
