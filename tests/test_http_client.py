@@ -108,6 +108,61 @@ def test_generate_text_stream_with_optional_args(
     assert mock.call_args_list[-1].kwargs["json"]["parameters"]["min_new_tokens"] == 4
 
 
+def test_request_exception_handling(
+    using_real_caikit,
+    http_client,
+    mock_text_generation,
+    model_name,
+    mocker,
+    accept_self_signed_certs,
+    pytestconfig,
+):
+    """force generation of an exception at text generation time to make
+    sure the client returns useful information,"""
+    exc_prefix = (
+        "Exception raised during inference. This may be a problem with your input:"
+    )
+    stream_exc_prefix = "Exception iterating responses:"
+    if using_real_caikit:
+        prompt = "dummy"
+        detail = "Value out of range: -1"
+        match = f"{exc_prefix} {detail}"
+        match_stream = (
+            f"{stream_exc_prefix} Unhandled exception: Value out of range: -1"
+        )
+        kwargs = {
+            # provide invalid kwargs
+            "min_new_tokens": -1,
+        }
+    else:
+        # mock_text_generation raises an exception when [[raise exception]] is in
+        # the input text
+        detail = "user requested an exception"
+        prompt = "[[raise exception]] dummy"
+        match = f"{exc_prefix} {detail}"
+        match_stream = f"{stream_exc_prefix} {detail}"
+        kwargs = {}
+
+    with pytest.raises(
+        RuntimeError,
+        match=match,
+    ):
+        http_client.generate_text(
+            model_name,
+            prompt,
+            **kwargs,
+        )
+    if pytestconfig.option.real_caikit:
+        streaming_response = http_client.generate_text_stream(
+            model_name, prompt, **kwargs
+        )
+        with pytest.raises(
+            RuntimeError,
+            match=match_stream,
+        ):
+            list(streaming_response)
+
+
 def test_get_text_generation_parameters(
     http_client, monkeysession, accept_self_signed_certs
 ):
