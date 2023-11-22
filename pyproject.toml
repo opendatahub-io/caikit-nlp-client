@@ -87,17 +87,18 @@ source = ["caikit_nlp_client", "tests"]
 skip_empty = true
 show_missing = true
 fail_under = 50
+exclude_lines = [
+    "if TYPE_CHECKING:",
+    "pragma: no cover",
+]
 
 [tool.coverage.paths]
 source = ["src"]
-tests = ["tests"]
 
 [tool.ruff]
 line-length = 88
 target-version = "py39"
 exclude = ["examples"]
-
-
 
 [tool.ruff.lint]
 select = [ "E", "F", "UP", "B", "SIM", "I"]
