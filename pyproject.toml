@@ -66,7 +66,7 @@ tests = [
     # list it as test dependency here if we want to publish this on pypi.
     # this install is currently offloaded to `noxfile.py`
     #"caikit-nlp @ git+https://github.com/caikit/caikit-nlp@0.3.0",
-    "caikit[runtime-grpc,runtime-http]>=0.23.2,<0.25.0",
+    "caikit[runtime-grpc,runtime-http]>=0.23.2,<0.26.0",
 ]
 
 [tool.bandit]
