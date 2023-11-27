@@ -230,6 +230,7 @@ class HttpClient:
             self._stream_api_url,
             json=payload,
             timeout=timeout,
+            stream=True,
             **req_kwargs,  # type: ignore
         )
         log.debug(f"Response: {response}")
