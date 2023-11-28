@@ -37,7 +37,6 @@ def model_name(request: pytest.FixtureRequest):
 
 
 @pytest.fixture(
-    autouse=True,
     scope="session",
     params=[ConnectionType.INSECURE, ConnectionType.TLS, ConnectionType.MTLS],
 )
