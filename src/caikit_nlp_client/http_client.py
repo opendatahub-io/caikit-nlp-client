@@ -69,18 +69,11 @@ class HttpClient:
         self._client_key_path = client_key_path
         self._ca_cert_path = ca_cert_path
         if (
-            any(
-                (
-                    self._client_key_path,
-                    self._client_cert_path,
-                    self._ca_cert_path,
-                )
-            )
+            any((self._client_key_path, self._client_cert_path))
             and not self._mtls_configured
         ):
             raise ValueError(
-                "Must provide both ca_cert_path, client_cert_path, client_key_path "
-                "for mTLS"
+                "Must provide both client_cert_path and client_key_path for mTLS"
             )
 
     @property
