@@ -230,11 +230,16 @@ def test_client_instantiation(
     client_cert_file,
     connection_type,
 ):
-    # MTLS tests
+    """mTLS tests"""
+
+    # should not raise when providing a CA bundle
+    HttpClient(
+        "https://localhost:8080",
+        ca_cert_path=ca_cert_file,
+    )
     with pytest.raises(
         ValueError,
-        match="Must provide both ca_cert_path, client_cert_path, client_key_path for "
-        "mTLS",
+        match="Must provide both client_cert_path and client_key_path for mTLS",
     ):
         HttpClient(
             "https://localhost:8080",
