@@ -35,7 +35,7 @@ def http_client(
     else:
         host, port = request.getfixturevalue("http_server_thread")
 
-    kwargs: dict[str, str] = {}
+    kwargs: dict = {}
 
     if connection_type is ConnectionType.INSECURE:
         url = f"http://{host}:{port}"

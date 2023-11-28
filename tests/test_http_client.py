@@ -8,6 +8,16 @@ from requests.exceptions import SSLError
 from .conftest import ConnectionType
 
 
+def test_client_invalid_args():
+    with pytest.raises(
+        TypeError, match=".* missing 1 required positional argument: 'base_url'"
+    ):
+        HttpClient()
+
+    with pytest.raises(ValueError, match="Cannot use insecure with ca_cert_path"):
+        HttpClient("dummy_base_url", insecure=True, ca_cert_path="dummy")
+
+
 def test_generate_text(
     http_client, model_name, prompt, mocker, accept_self_signed_certs
 ):
@@ -207,6 +217,10 @@ def test_tls_enabled(
         monkeypatch.setenv("REQUESTS_CA_BUNDLE", ca_cert_file)
 
         assert http_client.generate_text(model_name, "dummy text")
+
+    # setting insecure should make the request go through
+    http_client = HttpClient("https://{}:{}".format(*http_server), insecure=True)
+    assert http_client.generate_text(model_name, "dummy text")
 
 
 @pytest.mark.parametrize("connection_type", [ConnectionType.MTLS], indirect=True)

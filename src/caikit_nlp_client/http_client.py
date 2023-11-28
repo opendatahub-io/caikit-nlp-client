@@ -18,6 +18,7 @@ class HttpClient:
     def __init__(
         self,
         base_url: str,
+        insecure: Optional[bool] = None,
         ca_cert_path: Optional[str] = None,
         client_cert_path: Optional[str] = None,
         client_key_path: Optional[str] = None,
@@ -31,6 +32,14 @@ class HttpClient:
         For TLS (https) connections:
 
         >>> client = HttpClient("https://localhost:8080")
+
+        to skip verification of TLS certs:
+
+        >>> client = HttpClient("https://localhost:8080", insecure=True)
+
+        to use a custom CA (cannot be used with `insecure`):
+
+        >>> client = HttpClient("https://localhost:8080", ca_cert_path=path)
 
         For mTLS connections, both client_cert_path and client_key_path have to be
         provided:
@@ -50,6 +59,11 @@ class HttpClient:
         self._api_base = base_url
         self._api_url = f"{base_url}{text_generation_endpoint}"
         self._stream_api_url = f"{base_url}{text_generation_stream_endpoint}"
+
+        if insecure is not None and ca_cert_path:
+            raise ValueError("Cannot use insecure with ca_cert_path")
+
+        self._insecure = insecure
 
         self._client_cert_path = client_cert_path
         self._client_key_path = client_key_path
@@ -74,7 +88,7 @@ class HttpClient:
         return all((self._client_key_path, self._client_cert_path, self._ca_cert_path))
 
     def _get_tls_configuration(self) -> dict[str, Union[str, tuple[str, str]]]:
-        req_kwargs: dict[str, Union[str, tuple[str, str]]] = {}
+        req_kwargs: dict = {}
         if self._mtls_configured:
             assert self._client_key_path
             assert self._client_cert_path
@@ -83,8 +97,19 @@ class HttpClient:
                 self._client_cert_path,
                 self._client_key_path,
             )
+
         if self._ca_cert_path:
             req_kwargs["verify"] = self._ca_cert_path
+
+        if self._insecure is not None:
+            if self._ca_cert_path:
+                import warnings
+
+                warnings.warn(
+                    f"insecure={self._insecure} has overridden ca_cert_path",
+                    stacklevel=2,
+                )
+            req_kwargs["verify"] = not self._insecure
 
         return req_kwargs
 
