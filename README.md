@@ -43,9 +43,7 @@ from caikit_nlp_client import GrpcClient
 host = "localhost"
 port = 8085
 model_name = "flan-t5-small-caikit"
-grpc_client = GrpcClient(f"http://{host}:{port}", insecure=True)
-# or, with https:
-grpc_client = GrpcClient(f"https://{host}:{port}")
+grpc_client = GrpcClient(host, port)
 
 text = grpc_client.generate_text(model_name, "What is the boiling point of Nitrogen?")
 ```
@@ -70,6 +68,15 @@ http_client = HttpClient(f"https://{host}:{http_port}", ca_cert_path="ca.pem")
 with open("ca.pem", "rb") as fh:
     ca_cert = fh.read()
 grpc_client = GrpcClient(host, grpc_port, ca_cert=ca_cert)
+```
+
+To skip validation altogether:
+
+```python
+# http
+http_client = HttpClient(f"https://{host}:{http_port}", insecure=True)
+# grpc
+grpc_client = GrpcClient(host, port, insecure=True)
 ```
 
 ### mTLS
