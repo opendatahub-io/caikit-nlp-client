@@ -19,7 +19,7 @@ def get_random_port():
 
 
 class ConnectionType(Enum):
-    INSECURE = 1
+    INSECURE = 1  # grpc insecure (plaintext)
     TLS = 2
     MTLS = 3
 

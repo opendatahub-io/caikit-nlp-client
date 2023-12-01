@@ -40,10 +40,9 @@ To use the gRPC protocol
 ```python
 from caikit_nlp_client import GrpcClient
 
-host = "localhost"
-port = 8085
+host, port= "localhost", 8085
 model_name = "flan-t5-small-caikit"
-grpc_client = GrpcClient(host, port)
+grpc_client = GrpcClient(host, port, insecure=True) # plain text mode
 
 text = grpc_client.generate_text(model_name, "What is the boiling point of Nitrogen?")
 ```
@@ -60,7 +59,7 @@ for param, default_value in client.get_text_generation_parameters():
 
 ### Self-signed certificates
 
-To use a self signed certificate, assuming we have a certificate authority cert `ca.pem`
+To use a self-signed certificate, assuming we have a certificate authority cert `ca.pem`
 
 ```python
 http_client = HttpClient(f"https://{host}:{http_port}", ca_cert_path="ca.pem")
@@ -70,13 +69,13 @@ with open("ca.pem", "rb") as fh:
 grpc_client = GrpcClient(host, grpc_port, ca_cert=ca_cert)
 ```
 
-To skip validation altogether:
+To skip certificate validation:
 
 ```python
 # http
 http_client = HttpClient(f"https://{host}:{http_port}", insecure=True)
 # grpc
-grpc_client = GrpcClient(host, port, insecure=True)
+grpc_client = GrpcClient(host, port, verify=False)
 ```
 
 ### mTLS
@@ -105,7 +104,7 @@ grpc_client = GrpcClient(
     port,
     ca_cert=ca_cert,
     client_key=client_key,
-    client_cert
+    client_cert=client_cert,
 )
 ```
 
