@@ -42,18 +42,14 @@ class GrpcClient:
         >>> )
         """
 
-        try:
-            self._channel = self._make_channel(
-                host,
-                port,
-                insecure=insecure,
-                client_key=client_key,
-                client_cert=client_cert,
-                ca_cert=ca_cert,
-            )
-        except grpc._channel._MultiThreadedRendezvous as exc:
-            log.error("Could not connect to the server: %s", exc.details)
-            raise RuntimeError(f"Could not connect to {host}:{port}") from None
+        self._channel = self._make_channel(
+            host,
+            port,
+            insecure=insecure,
+            client_key=client_key,
+            client_cert=client_cert,
+            ca_cert=ca_cert,
+        )
 
         self._reflection_db = ProtoReflectionDescriptorDatabase(self._channel)
         self._desc_pool = DescriptorPool(self._reflection_db)
@@ -83,6 +79,11 @@ class GrpcClient:
                 request_serializer=self._task_text_generation_request.SerializeToString,
                 response_deserializer=self._generated_text_result.FromString,
             )
+        except grpc._channel._MultiThreadedRendezvous as exc:
+            log.error("Could not connect to the server: %s", exc.details())
+            raise RuntimeError(
+                f"Could not connect to {host}:{port}:" f"{exc.details()}"
+            ) from None
         except KeyError as exc:
             log.error("The grpc server does not have the type: %s", exc)
             raise ValueError(str(exc)) from exc
