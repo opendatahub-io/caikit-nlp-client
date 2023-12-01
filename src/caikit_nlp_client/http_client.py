@@ -286,11 +286,10 @@ class HttpClient:
                 ) from exc
 
     def _create_json_request(self, model_id, text, **kwargs) -> dict[str, Any]:
-        json_input = {
+        payload = {
             "model_id": model_id,
             "inputs": text,
-            "parameters": {"max_new_tokens": 200, "min_new_tokens": 10},
         }
-        if parameters := json_input.get("parameters"):
-            parameters.update(kwargs)
-        return json_input
+        if kwargs:
+            payload.update(parameters=kwargs)
+        return payload
