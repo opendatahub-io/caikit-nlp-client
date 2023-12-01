@@ -148,3 +148,34 @@ def test_get_text_generation_parameters(grpc_client):
         "stop_sequences": "string",
         "preserve_input_text": "bool",
     }
+
+
+def test_invalid_init_options(grpc_server):
+    with pytest.raises(ValueError, match="insecure cannot be used with verify"):
+        GrpcClient(*grpc_server, insecure=True, verify=True)
+
+    for kwargs in (
+        {"ca_cert": "dummy"},
+        {"client_key": "dummy"},
+        {"client_cert": "dummy"},
+    ):
+        with pytest.raises(
+            ValueError, match="cannot use insecure with TLS/mTLS certificates"
+        ):
+            GrpcClient(*grpc_server, insecure=True, **kwargs)
+
+
+def test_verify(model_name, grpc_server, connection_type, client_key):
+    """test verify kwarg for TLS connections"""
+    if connection_type != ConnectionType.TLS:
+        return
+
+    with pytest.raises(
+        RuntimeError,
+        match="Could not connect to localhost:.*:failed to connect to all addresses;.*",
+    ):
+        grpc_client = GrpcClient(*grpc_server)
+
+    grpc_client = GrpcClient(*grpc_server, verify=False)
+
+    assert grpc_client.generate_text(model_name, "dummy text")

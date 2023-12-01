@@ -1,4 +1,5 @@
 import logging
+import ssl
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -28,24 +29,45 @@ class GrpcClient:
         port: int,
         *,
         insecure: bool = False,
+        verify: Optional[bool] = None,
         ca_cert: Optional[bytes] = None,
         client_key: Optional[bytes] = None,
         client_cert: Optional[bytes] = None,
     ) -> None:
         """Client class for a Caikit NLP grpc server
 
-        >>> # To connect via an insecure port
-        >>> client = GrpcClient("localhost", port=8085)
+        Default connection mode uses a grpc secure channel (TLS)
+
+        >>> client = GrpcClient("localhost", port=8085, plaintext=True)
         >>> generated_text = client.generate_text_stream(
         >>>     "flan-t5-small-caikit",
         >>>     "What is the boiling point of Nitrogen?",
         >>> )
+
+        To connect using TLS:
+
+        >>> client = GrpcClient("localhost", port=443)
+
+        To skip certificate verification:
+
+        >>> client = GrpcClient(remote_host, port=443, insecure=True)
+
+        To provide a custom certificate:
+
+        >>> with open("cert.pem", "rb") as fh:
+        >>>     cert = fh.read()
+        >>> client = GrpcClient(remote_host, port=443, ca_cert=cert)
+
+        To skip certificate(s) verification:
+
+        >>> client = GrpcClient(remote_host, port=443, verify=False)
         """
 
         self._channel = self._make_channel(
             host,
             port,
             insecure=insecure,
+            verify=verify,
             client_key=client_key,
             client_cert=client_cert,
             ca_cert=ca_cert,
@@ -239,18 +261,38 @@ class GrpcClient:
         port: int,
         *,
         insecure: bool = False,
+        verify: Optional[bool] = None,
         ca_cert: Optional[bytes] = None,
         client_key: Optional[bytes] = None,
         client_cert: Optional[bytes] = None,
     ) -> grpc.Channel:
+        """Creates a grpc channel
+
+        Args:
+        - host: str
+        - port: str
+        - (optional) insecure: use a plaintext connection (default=False)
+        - (optional) verify: set to False to disable remote host certificate(s)
+                     verification. Cannot be used with `plaintext` or with MTLS
+        - (optional) ca_cert: certificate authority to use
+        - (optional) client_key: client key for mTLS mode
+        - (optional) client_cert: client cert for mTLS mode
+
+        """
         if not host.strip():
             raise ValueError("A non empty host name is required")
         if int(port) <= 0:
             raise ValueError("A non zero port number is required")
+        if insecure and any(
+            (val is not None) for val in (ca_cert, client_key, client_cert)
+        ):
+            raise ValueError("cannot use insecure with TLS/mTLS certificates")
+        if insecure and verify:
+            raise ValueError("insecure cannot be used with verify")
 
         connection = f"{host}:{port}"
         if insecure:
-            log.warning("Connecting over an insecure grpc channel")
+            log.warning("Connecting over an insecure plaintext grpc channel")
             return grpc.insecure_channel(connection)
 
         credentials_kwargs: dict[str, bytes] = {}
@@ -264,10 +306,16 @@ class GrpcClient:
                 private_key=client_key,
                 certificate_chain=client_cert,
             )
+        elif verify is False:
+            log.warning(
+                "insecure mode: trusting remote certificate from %s:%d",
+                host,
+                port,
+            )
+
+            cert = ssl.get_server_certificate((host, port)).encode()
+            credentials_kwargs.update(root_certificates=cert)
 
         return grpc.secure_channel(
-            connection,
-            grpc.ssl_channel_credentials(**credentials_kwargs)
-            if credentials_kwargs
-            else grpc.ssl_channel_credentials(),
+            connection, grpc.ssl_channel_credentials(**credentials_kwargs)
         )
