@@ -264,10 +264,10 @@ class GrpcClient:
                 private_key=client_key,
                 certificate_chain=client_cert,
             )
-        else:
-            raise ValueError("mTLS requires client_cert, client_key and ca_cert")
 
         return grpc.secure_channel(
             connection,
-            grpc.ssl_channel_credentials(**credentials_kwargs),
+            grpc.ssl_channel_credentials(**credentials_kwargs)
+            if credentials_kwargs
+            else grpc.ssl_channel_credentials(),
         )
