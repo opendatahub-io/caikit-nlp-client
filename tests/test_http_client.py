@@ -26,6 +26,34 @@ def test_generate_text(
     assert generated_text
 
 
+def test_create_json_request():
+    client = HttpClient("dummyurl")
+    assert client._create_json_request("dummymodel", "dummytext") == {
+        "model_id": "dummymodel",
+        "inputs": "dummytext",
+    }
+
+    assert client._create_json_request(
+        "dummymodel", "dummytext", max_new_tokens=42, min_new_tokens=1
+    ) == {
+        "model_id": "dummymodel",
+        "inputs": "dummytext",
+        "parameters": {
+            "max_new_tokens": 42,
+            "min_new_tokens": 1,
+        },
+    }
+    assert client._create_json_request(
+        "dummymodel", "dummytext", example_parameter="value"
+    ) == {
+        "model_id": "dummymodel",
+        "inputs": "dummytext",
+        "parameters": {
+            "example_parameter": "value",
+        },
+    }
+
+
 def test_generate_text_with_optional_args(
     http_client,
     model_name,
