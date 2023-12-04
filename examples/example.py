@@ -60,14 +60,14 @@ with open("ca.pem", "rb") as fh:
 # Using a self-signed CA Certificate with the grpc client
 grpc_client = GrpcClient(host, grpc_port, ca_cert=ca_cert)
 
-# Using the grpc client skipping remote host certificate(s) verification
-grpc_client = GrpcClient(host=host, port=grpc_port, verify=False)
+# Using the http client skipping remote host certificate(s) verification
+http_client = HttpClient(f"https://{host}", verify=False)
 text = grpc_client.generate_text("flan-t5-small-caikit", text)
 print(text)
 # 'this is the generated text'
 
-# Using the http client skipping remote host certificate(s) verification
-http_client = HttpClient(f"https://{host}", verify=False)
+# Using the grpc client skipping remote host certificate(s) verification
+grpc_client = GrpcClient(host=host, port=grpc_port, verify=False)
 text = grpc_client.generate_text("flan-t5-small-caikit", text)
 print(text)
 # 'this is the generated text'

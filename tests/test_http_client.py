@@ -14,8 +14,8 @@ def test_client_invalid_args():
     ):
         HttpClient()
 
-    with pytest.raises(ValueError, match="Cannot use insecure with ca_cert_path"):
-        HttpClient("dummy_base_url", insecure=True, ca_cert_path="dummy")
+    with pytest.raises(ValueError, match="Cannot use verify=False with ca_cert_path"):
+        HttpClient("dummy_base_url", verify=False, ca_cert_path="dummy")
 
 
 def test_generate_text(
@@ -246,8 +246,8 @@ def test_tls_enabled(
 
         assert http_client.generate_text(model_name, "dummy text")
 
-    # setting insecure should make the request go through
-    http_client = HttpClient("https://{}:{}".format(*http_server), insecure=True)
+    # setting verify=False should make the request go through
+    http_client = HttpClient("https://{}:{}".format(*http_server), verify=False)
     assert http_client.generate_text(model_name, "dummy text")
 
 
