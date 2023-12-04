@@ -1,7 +1,7 @@
 import logging
 import ssl
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 if TYPE_CHECKING:
     from google._upb._message import Descriptor, Message
@@ -30,9 +30,9 @@ class GrpcClient:
         *,
         insecure: bool = False,
         verify: Optional[bool] = None,
-        ca_cert: Optional[bytes] = None,
-        client_key: Optional[bytes] = None,
-        client_cert: Optional[bytes] = None,
+        ca_cert: Union[None, bytes, str] = None,
+        client_cert: Union[None, bytes, str] = None,
+        client_key: Union[None, bytes, str] = None,
     ) -> None:
         """Client class for a Caikit NLP grpc server
 
@@ -62,7 +62,6 @@ class GrpcClient:
 
         >>> client = GrpcClient(remote_host, port=443, verify=False)
         """
-
         self._channel = self._make_channel(
             host,
             port,
@@ -262,9 +261,9 @@ class GrpcClient:
         *,
         insecure: bool = False,
         verify: Optional[bool] = None,
-        ca_cert: Optional[bytes] = None,
-        client_key: Optional[bytes] = None,
-        client_cert: Optional[bytes] = None,
+        ca_cert: Union[None, bytes, str] = None,
+        client_key: Union[None, bytes, str] = None,
+        client_cert: Union[None, bytes, str] = None,
     ) -> grpc.Channel:
         """Creates a grpc channel
 
@@ -290,21 +289,25 @@ class GrpcClient:
         if insecure and verify:
             raise ValueError("insecure cannot be used with verify")
 
+        client_key_bytes = self._try_load_certificate(client_key)
+        client_cert_bytes = self._try_load_certificate(client_cert)
+        ca_cert_bytes = self._try_load_certificate(ca_cert)
+
         connection = f"{host}:{port}"
         if insecure:
             log.warning("Connecting over an insecure plaintext grpc channel")
             return grpc.insecure_channel(connection)
 
         credentials_kwargs: dict[str, bytes] = {}
-        if ca_cert and not (any((client_cert, client_key))):
+        if ca_cert_bytes and not (any((client_cert_bytes, client_key_bytes))):
             log.info("Connecting using provided CA certificate for secure channel")
-            credentials_kwargs.update(root_certificates=ca_cert)
-        elif client_cert and client_key and ca_cert:
+            credentials_kwargs.update(root_certificates=ca_cert_bytes)
+        elif client_cert_bytes and client_key_bytes and ca_cert_bytes:
             log.info("Connecting using mTLS for secure channel")
             credentials_kwargs.update(
-                root_certificates=ca_cert,
-                private_key=client_key,
-                certificate_chain=client_cert,
+                root_certificates=ca_cert_bytes,
+                private_key=client_key_bytes,
+                certificate_chain=client_cert_bytes,
             )
         elif verify is False:
             log.warning(
@@ -318,4 +321,21 @@ class GrpcClient:
 
         return grpc.secure_channel(
             connection, grpc.ssl_channel_credentials(**credentials_kwargs)
+        )
+
+    @staticmethod
+    def _try_load_certificate(certificate: Union[None, bytes, str]) -> Optional[bytes]:
+        """If the certificate points to a file, return the contents (plaintext reads).
+        Else return the bytes"""
+        if not certificate:
+            return None
+
+        if isinstance(certificate, bytes):
+            return certificate
+
+        if isinstance(certificate, str):
+            with open(certificate, "rb") as secret_file:
+                return secret_file.read()
+        raise ValueError(
+            f"{certificate=} should be a path to a certificate files or bytes"
         )
