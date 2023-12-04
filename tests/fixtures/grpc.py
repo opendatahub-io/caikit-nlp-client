@@ -41,22 +41,22 @@ def grpc_server_thread_port():
 def grpc_client(
     grpc_server,
     connection_type,
-    ca_cert,
-    client_key,
-    client_cert,
+    ca_cert_file,
+    client_key_file,
+    client_cert_file,
 ) -> GrpcClient:
     if connection_type is ConnectionType.INSECURE:
         return GrpcClient(*grpc_server, insecure=True)
 
     if connection_type is ConnectionType.TLS:
-        return GrpcClient(*grpc_server, ca_cert=ca_cert)
+        return GrpcClient(*grpc_server, ca_cert=ca_cert_file)
 
     if connection_type is ConnectionType.MTLS:
         return GrpcClient(
             *grpc_server,
-            ca_cert=ca_cert,
-            client_key=client_key,
-            client_cert=client_cert,
+            ca_cert=ca_cert_file,
+            client_key=client_key_file,
+            client_cert=client_cert_file,
         )
 
     raise ValueError(f"invalid {connection_type=}")

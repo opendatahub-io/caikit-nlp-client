@@ -106,6 +106,14 @@ grpc_client = GrpcClient(
     client_key=client_key,
     client_cert=client_cert,
 )
+# alternatively you can pass the paths directly to the client constructor
+grpc_client = GrpcClient(
+    host,
+    port,
+    ca_cert="ca.pem",
+    client_cert="client.pem",
+    client_key="client-key.pem"
+)
 ```
 
 ## Contributing

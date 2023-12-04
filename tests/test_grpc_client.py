@@ -179,3 +179,37 @@ def test_verify(model_name, grpc_server, connection_type, client_key):
     grpc_client = GrpcClient(*grpc_server, verify=False)
 
     assert grpc_client.generate_text(model_name, "dummy text")
+
+
+def test_grpc_client_with_bogus_certificate_files(grpc_server):
+    for kwargs in (
+        {"ca_cert": "/some/random/path/cert.pem"},
+        {"client_key": "/some/random/path/cert.pem"},
+        {"client_cert": "/some/random/path/cert.pem"},
+    ):
+        with pytest.raises(
+            FileNotFoundError,
+            match=".*No such file or directory.*",
+        ):
+            GrpcClient(
+                *grpc_server,
+                insecure=False,
+                **kwargs,
+            )
+
+
+def test_grpc_client_load_certificate(ca_cert, ca_cert_file):
+    assert ca_cert == GrpcClient._try_load_certificate(ca_cert)
+    assert ca_cert == GrpcClient._try_load_certificate(ca_cert_file)
+    assert GrpcClient._try_load_certificate(None) is None
+
+    with pytest.raises(
+        FileNotFoundError,
+        match=".*No such file or directory.*",
+    ):
+        GrpcClient._try_load_certificate("/some/random/path/cert.pem")
+
+    with pytest.raises(
+        ValueError, match=".*should be a path to a certificate files or bytes"
+    ):
+        GrpcClient._try_load_certificate(("Pinky", "Brain"))
