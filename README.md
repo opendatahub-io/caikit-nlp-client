@@ -73,7 +73,7 @@ To skip certificate validation:
 
 ```python
 # http
-http_client = HttpClient(f"https://{host}:{http_port}", insecure=True)
+http_client = HttpClient(f"https://{host}:{http_port}", verify=False)
 # grpc
 grpc_client = GrpcClient(host, port, verify=False)
 ```

@@ -18,7 +18,7 @@ class HttpClient:
     def __init__(
         self,
         base_url: str,
-        insecure: Optional[bool] = None,
+        verify: Optional[bool] = None,
         ca_cert_path: Optional[str] = None,
         client_cert_path: Optional[str] = None,
         client_key_path: Optional[str] = None,
@@ -35,9 +35,9 @@ class HttpClient:
 
         to skip verification of TLS certs:
 
-        >>> client = HttpClient("https://localhost:8080", insecure=True)
+        >>> client = HttpClient("https://localhost:8080", verify=False)
 
-        to use a custom CA (cannot be used with `insecure`):
+        to use a custom CA:
 
         >>> client = HttpClient("https://localhost:8080", ca_cert_path=path)
 
@@ -60,10 +60,10 @@ class HttpClient:
         self._api_url = f"{base_url}{text_generation_endpoint}"
         self._stream_api_url = f"{base_url}{text_generation_stream_endpoint}"
 
-        if insecure is not None and ca_cert_path:
-            raise ValueError("Cannot use insecure with ca_cert_path")
+        if verify is False and ca_cert_path:
+            raise ValueError("Cannot use verify=False with ca_cert_path")
 
-        self._insecure = insecure
+        self._verify = verify
 
         self._client_cert_path = client_cert_path
         self._client_key_path = client_key_path
@@ -93,16 +93,8 @@ class HttpClient:
 
         if self._ca_cert_path:
             req_kwargs["verify"] = self._ca_cert_path
-
-        if self._insecure is not None:
-            if self._ca_cert_path:
-                import warnings
-
-                warnings.warn(
-                    f"insecure={self._insecure} has overridden ca_cert_path",
-                    stacklevel=2,
-                )
-            req_kwargs["verify"] = not self._insecure
+        elif self._verify is not None:
+            req_kwargs["verify"] = self._verify
 
         return req_kwargs
 
