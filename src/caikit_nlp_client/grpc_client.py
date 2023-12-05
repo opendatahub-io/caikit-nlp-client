@@ -1,7 +1,8 @@
 import logging
-import ssl
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Optional, Union
+
+from .utils import get_server_certificate
 
 if TYPE_CHECKING:
     from google._upb._message import Descriptor, Message
@@ -316,7 +317,7 @@ class GrpcClient:
                 port,
             )
 
-            cert = ssl.get_server_certificate((host, port)).encode()
+            cert = get_server_certificate(host, port).encode()
             credentials_kwargs.update(root_certificates=cert)
 
         return grpc.secure_channel(
