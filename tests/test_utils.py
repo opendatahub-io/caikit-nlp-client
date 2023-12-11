@@ -46,4 +46,4 @@ def server(app, server_key_file, server_cert_file):
 
 def test_get_server_certificate(server, server_cert):
     host, port = server
-    assert get_server_certificate(host, port) == server_cert
+    assert get_server_certificate(host, port).encode() == server_cert
