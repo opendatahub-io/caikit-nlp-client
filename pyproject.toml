@@ -28,8 +28,9 @@ authors = [
 requires-python = ">=3.9"
 
 dependencies = [
-    "grpcio-reflection==1.59.3",
-    "requests==2.31.0"
+    "protobuf>=4.22.0",
+    "grpcio-reflection>=1.49.3",
+    "requests>=2.22",
 ]
 
 [project.urls]
@@ -46,13 +47,13 @@ version_file = "src/caikit_nlp_client/_version.py"
 [project.optional-dependencies]
 dev = [
     "ruff==0.1.7",
-    "grpcio-tools==1.59.3",
+    "grpcio-tools>=1.49.3",
     "caikit_nlp_client[types]"
 ]
 types = [
     "mypy==1.7.1",
-    "types-requests==2.31.0.10",
-    "types-protobuf==4.24.0.4"
+    "types-requests>=2.22.0.10",
+    "types-protobuf>=4.22.0.0"
 ]
 tests = [
     "pytest",
