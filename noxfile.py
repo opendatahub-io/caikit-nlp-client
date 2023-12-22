@@ -14,10 +14,6 @@ nox.needs_version = ">= 2021.6.6"
 nox.options.sessions = ("pre-commit", "mypy", "tests", "build")
 
 
-# see note regarding caikit_nlp in pyproject.toml
-caikit_nlp_version = "caikit-nlp @ git+https://github.com/caikit/caikit-nlp@0.3.0"
-
-
 def activate_virtualenv_in_precommit_hooks(session: nox.Session) -> None:
     """Activate virtualenv in hooks installed by pre-commit.
 
@@ -119,7 +115,6 @@ def mypy(session: nox.Session) -> None:
     session.install(
         "--index-url=https://download.pytorch.org/whl/cpu", "torch"
     )  # use torch-cpu to speed up tests
-    session.install(caikit_nlp_version)
     session.install(".[dev,tests]")
     session.run("python", "-m", "mypy", *args)
     if not session.posargs:
@@ -132,7 +127,6 @@ def tests(session: nox.Session) -> None:
     session.install(
         "--index-url=https://download.pytorch.org/whl/cpu", "torch"
     )  # use torch-cpu to speed up tests
-    session.install(caikit_nlp_version)
     session.install(".[tests]")
     try:
         session.run(

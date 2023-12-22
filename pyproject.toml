@@ -62,11 +62,7 @@ tests = [
     "pytest-mock",
     "coverage[toml]",
     "grpcio-health-checking",
-    # NOTE: caikit-nlp is not on pypi because of a git dependency (see
-    # https://github.com/caikit/caikit-nlp/issues/263), so we cannot
-    # list it as test dependency here if we want to publish this on pypi.
-    # this install is currently offloaded to `noxfile.py`
-    #"caikit-nlp @ git+https://github.com/caikit/caikit-nlp@0.3.0",
+    "caikit-nlp==0.4.1",
     "caikit[runtime-grpc,runtime-http]>=0.23.2,<0.26.0",
 ]
 
