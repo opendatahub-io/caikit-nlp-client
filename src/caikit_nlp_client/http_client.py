@@ -179,12 +179,13 @@ class HttpClient:
         log.debug(f"Response: {response}")
         if response.status_code == 200:
             return response.json()["generated_text"]
-        elif 400 <= response.status_code < 500:
-            raise RuntimeError(response.json()["details"])
-        else:
-            raise RuntimeError(
-                f"{response.status_code}: Server error {response.reason}"
-            )
+
+        try:
+            details = response.json()["details"]
+        except json.JSONDecodeError:
+            details = f"{response.reason} {response.text=}"
+
+        raise RuntimeError(f"{response.status_code=} {details}")
 
     def generate_text_stream(
         self, model_id: str, text: str, timeout: float = 60.0, **kwargs
