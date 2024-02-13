@@ -1,3 +1,4 @@
+import re
 from types import GeneratorType
 
 import pytest
@@ -165,9 +166,7 @@ def test_request_exception_handling(
         prompt = "dummy"
         detail = "Value out of range: -1"
         match = f"{exc_prefix} {detail}"
-        match_stream = (
-            f"{stream_exc_prefix} Unhandled exception: Value out of range: -1"
-        )
+        match_stream = re.escape(f"{stream_exc_prefix} ValueError('{detail}')")
         kwargs = {
             # provide invalid kwargs
             "min_new_tokens": -1,
