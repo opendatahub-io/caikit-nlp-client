@@ -248,9 +248,15 @@ class HttpClient:
         buffer: list[bytes] = []
         for line in response.iter_lines():
             if line:
-                # the first 6 bytes contain "data: ", we can skip those
-                buffer.append(line[6:])
-                continue
+                if line.startswith(b"data: "):
+                    buffer.append(line[6:])
+                    continue
+                if line.startswith(b"event: message"):
+                    assert not line[14:]
+                    continue
+                if line.startswith(b"event: error"):
+                    assert not line[12:]
+                    continue
 
             try:
                 message = json.loads(b"".join(buffer))
