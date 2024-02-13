@@ -30,6 +30,11 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v4
 
+      - name: Free Disk Space # the caikit-tgis-serving images can be fairly large, and pulling them might make this test fail
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false
+
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v5.0.0
         with:
