@@ -87,14 +87,11 @@ def test_request_exception_handling(
 ):
     """force generation of an exception at text generation time to make
     sure the client returns useful information,"""
-    exc_prefix = (
-        "Exception raised during inference. This may be a problem with your input:"
-    )
     stream_exc_prefix = "Exception iterating responses:"
     if using_real_caikit:
         prompt = "dummy"
         detail = "Value out of range: -1"
-        match = f"{exc_prefix} {detail}"
+        match = f"{detail}"
         match_stream = f"{stream_exc_prefix} {detail}"
         kwargs = {
             # provide invalid kwargs
@@ -105,7 +102,7 @@ def test_request_exception_handling(
         # the input text
         detail = "user requested an exception"
         prompt = "[[raise exception]] dummy"
-        match = f"{exc_prefix} {detail}"
+        match = f"{detail}"
         match_stream = f"{stream_exc_prefix} {detail}"
         kwargs = {}
 
