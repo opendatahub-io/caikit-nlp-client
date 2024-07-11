@@ -289,7 +289,6 @@ class HttpClient:
                     "Exception iterating responses: {}".format(message["details"])
                 )
             yield message["generated_text"]
-
         if buffer:
             final_message = json.loads(b"".join(buffer))
             if "details" in final_message and "code" in final_message:
@@ -326,3 +325,210 @@ class HttpClient:
         response.raise_for_status()
 
         return response.json()["models"]
+
+    def embedding(
+        self,
+        model_id: str,
+        text: str,
+        timeout: float = 60.0,
+        parameters: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        log.info(f"Calling embedding for '{model_id}'")
+        json_input: dict[str, Any] = {
+            "inputs": text,
+            "model_id": model_id,
+        }
+        if parameters:
+            json_input.update(parameters=parameters)
+
+        req_kwargs = self._get_tls_configuration()
+
+        response = requests.post(
+            f"{self._api_base}/api/v1/task/embedding",
+            json=json_input,
+            timeout=timeout,
+            **req_kwargs,  # type: ignore
+        )
+        log.debug(f"Response: {response}")
+        return self._unpack_or_raise_details(response)
+
+    def embedding_tasks(
+        self,
+        model_id: str,
+        texts: list[str],
+        timeout: float = 60.0,
+        parameters: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        log.info(f"Calling embedding_tasks for '{model_id}'")
+        json_input: dict[str, Any] = {
+            "inputs": texts,
+            "model_id": model_id,
+        }
+        if parameters:
+            json_input.update(parameters=parameters)
+
+        req_kwargs = self._get_tls_configuration()
+
+        response = requests.post(
+            f"{self._api_base}/api/v1/task/embedding-tasks",
+            json=json_input,
+            timeout=timeout,
+            **req_kwargs,  # type: ignore
+        )
+        log.debug(f"Response: {response}")
+        return self._unpack_or_raise_details(response, details_field="detail")
+
+    def sentence_similarity(
+        self,
+        model_id: str,
+        source_sentence: str,
+        sentences: list[str],
+        timeout: float = 60.0,
+        parameters: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        log.info(f"Calling sentence_similarity for '{model_id}'")
+        json_input = {
+            "inputs": {
+                "source_sentence": source_sentence,
+                "sentences": sentences,
+            },
+            "model_id": model_id,
+        }
+        if parameters:
+            json_input.update(parameters=parameters)
+
+        req_kwargs = self._get_tls_configuration()
+
+        response = requests.post(
+            f"{self._api_base}/api/v1/task/sentence-similarity",
+            json=json_input,
+            timeout=timeout,
+            **req_kwargs,  # type: ignore
+        )
+        log.debug(f"Response: {response}")
+        return self._unpack_or_raise_details(response, details_field="detail")
+
+    def sentence_similarity_tasks(
+        self,
+        model_id: str,
+        source_sentences: list[str],
+        sentences: list[str],
+        timeout: float = 60.0,
+        parameters: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        log.info(f"Calling sentence_similarity_tasks for '{model_id}'")
+        json_input = {
+            "inputs": {
+                "source_sentences": source_sentences,
+                "sentences": sentences,
+            },
+            "model_id": model_id,
+        }
+        if parameters:
+            json_input.update(parameters=parameters)
+
+        req_kwargs = self._get_tls_configuration()
+
+        response = requests.post(
+            f"{self._api_base}/api/v1/task/sentence-similarity-tasks",
+            json=json_input,
+            timeout=timeout,
+            **req_kwargs,  # type: ignore
+        )
+        log.debug(f"Response: {response}")
+        return self._unpack_or_raise_details(response, details_field="detail")
+
+    def rerank(
+        self,
+        model_id: str,
+        documents: list[dict[str, Any]],
+        query: str,
+        timeout: float = 60.0,
+        parameters: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        log.info(f"Calling rerank for '{model_id}'")
+        json_input = {
+            "inputs": {
+                "documents": documents,
+                "query": query,
+            },
+            "model_id": model_id,
+        }
+        if parameters:
+            json_input.update(parameters=parameters)
+
+        req_kwargs = self._get_tls_configuration()
+
+        response = requests.post(
+            f"{self._api_base}/api/v1/task/rerank",
+            json=json_input,
+            timeout=timeout,
+            **req_kwargs,  # type: ignore
+        )
+        log.debug(f"Response: {response}")
+        return self._unpack_or_raise_details(response, details_field="detail")
+
+    def rerank_tasks(
+        self,
+        model_id: str,
+        documents: list[dict[str, Any]],
+        queries: list[str],
+        timeout: float = 60.0,
+        parameters: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        log.info(f"Calling rerank_tasks for '{model_id}'")
+        json_input = {
+            "inputs": {
+                "documents": documents,
+                "queries": queries,
+            },
+            "model_id": model_id,
+        }
+        if parameters:
+            json_input.update(parameters=parameters)
+
+        req_kwargs = self._get_tls_configuration()
+
+        response = requests.post(
+            f"{self._api_base}/api/v1/task/rerank-tasks",
+            json=json_input,
+            timeout=timeout,
+            **req_kwargs,  # type: ignore
+        )
+        log.debug(f"Response: {response}")
+        return self._unpack_or_raise_details(response)
+
+    def _unpack_or_raise_details(
+        self, response: requests.Response, details_field="details"
+    ) -> dict[str, Any]:
+        """
+        The details_field is present because there seems to be an inconsistent naming of this
+        field between different endpoints. Some have "details" others have "detail".
+        """
+        if response.status_code == 200:
+            return response.json()
+
+        try:
+            details = response.json()[details_field]
+        except json.JSONDecodeError:
+            details = f"{response.reason} {response.text=}"
+
+        raise RuntimeError(f"{response.status_code=} {details}")
