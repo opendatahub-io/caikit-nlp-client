@@ -98,7 +98,10 @@ class HttpClient:
 
         return req_kwargs
 
-    def get_text_generation_parameters(self, timeout: float = 60.0) -> dict[str, str]:
+    def get_text_generation_parameters(
+        self,
+        timeout: float = 60.0,
+    ) -> dict[str, str]:
         """returns a dict with available fields and their type"""
         req_kwargs = self._get_tls_configuration()
 
@@ -129,7 +132,11 @@ class HttpClient:
         return simplify_parameter_schema(parameters)
 
     def generate_text(
-        self, model_id: str, text: str, timeout: float = 60.0, **kwargs
+        self,
+        model_id: str,
+        text: str,
+        timeout: float = 60.0,
+        **kwargs,
     ) -> str:
         """Queries the `text-generation` endpoint for the given model_id
 
@@ -188,7 +195,11 @@ class HttpClient:
         raise RuntimeError(f"{response.status_code=} {details}")
 
     def generate_text_stream(
-        self, model_id: str, text: str, timeout: float = 60.0, **kwargs
+        self,
+        model_id: str,
+        text: str,
+        timeout: float = 60.0,
+        **kwargs,
     ) -> Iterable[str]:
         """Queries the `text-generation` stream endpoint for the given model_id
 
