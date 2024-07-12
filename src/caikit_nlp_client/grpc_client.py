@@ -2,17 +2,17 @@ import logging
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-from .utils import get_server_certificate
-
-if TYPE_CHECKING:
-    from google._upb._message import Descriptor, Message
-
 import grpc
 from google.protobuf.descriptor_pool import DescriptorPool
 from google.protobuf.message_factory import GetMessageClass
 from grpc_reflection.v1alpha.proto_reflection_descriptor_database import (
     ProtoReflectionDescriptorDatabase,
 )
+
+from .utils import get_server_certificate
+
+if TYPE_CHECKING:
+    from google._upb._message import Descriptor, Message
 
 log = logging.getLogger(__name__)
 
