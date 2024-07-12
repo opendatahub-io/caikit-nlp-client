@@ -110,7 +110,12 @@ class GrpcClient:
             log.error("The grpc server does not have the type: %s", exc)
             raise ValueError(str(exc)) from exc
 
-    def generate_text(self, model_id: str, text: str, **kwargs) -> str:
+    def generate_text(
+        self,
+        model_id: str,
+        text: str,
+        **kwargs,
+    ) -> str:
         """Sends a generate text request to the server for the given model id
 
         Args:
@@ -185,7 +190,12 @@ class GrpcClient:
         self._close()
         return False
 
-    def generate_text_stream(self, model_id: str, text: str, **kwargs) -> Iterable[str]:
+    def generate_text_stream(
+        self,
+        model_id: str,
+        text: str,
+        **kwargs,
+    ) -> Iterable[str]:
         """Sends a generate text stream request to the server for the given model id
 
         Args:
