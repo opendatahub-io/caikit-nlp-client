@@ -382,7 +382,7 @@ class HttpClient:
             **req_kwargs,  # type: ignore
         )
         log.debug(f"Response: {response}")
-        return self._unpack_or_raise_details(response, details_field="detail")
+        return self._unpack_or_raise_details(response)
 
     def sentence_similarity(
         self,
@@ -415,7 +415,7 @@ class HttpClient:
             **req_kwargs,  # type: ignore
         )
         log.debug(f"Response: {response}")
-        return self._unpack_or_raise_details(response, details_field="detail")
+        return self._unpack_or_raise_details(response)
 
     def sentence_similarity_tasks(
         self,
@@ -448,7 +448,7 @@ class HttpClient:
             **req_kwargs,  # type: ignore
         )
         log.debug(f"Response: {response}")
-        return self._unpack_or_raise_details(response, details_field="detail")
+        return self._unpack_or_raise_details(response)
 
     def rerank(
         self,
@@ -481,7 +481,7 @@ class HttpClient:
             **req_kwargs,  # type: ignore
         )
         log.debug(f"Response: {response}")
-        return self._unpack_or_raise_details(response, details_field="detail")
+        return self._unpack_or_raise_details(response)
 
     def rerank_tasks(
         self,
@@ -517,16 +517,23 @@ class HttpClient:
         return self._unpack_or_raise_details(response)
 
     def _unpack_or_raise_details(
-        self, response: requests.Response, details_field="details"
+        self, response: requests.Response, details_field=None
     ) -> dict[str, Any]:
         """
-        The details_field is present because there seems to be an inconsistent naming of this
-        field between different endpoints. Some have "details" others have "detail".
+        The details_field is present because there seems to be an inconsistent
+        naming of this field between different endpoints.
+        Some have "details" while others have "detail".
+
+        See the following issue: https://github.com/caikit/caikit/issues/750
+
+        When details_field == None, try to detect the right name of the details field.
         """
         if response.status_code == 200:
             return response.json()
 
         try:
+            if details_field is None:
+                details_field = "details" if "details" in response.json() else "detail"
             details = response.json()[details_field]
         except json.JSONDecodeError:
             details = f"{response.reason} {response.text=}"
