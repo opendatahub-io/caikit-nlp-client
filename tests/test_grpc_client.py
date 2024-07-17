@@ -125,7 +125,8 @@ def test_request_exception_handling(
 
 
 def test_get_text_generation_parameters(grpc_client):
-    assert grpc_client.get_text_generation_parameters() == {
+    params = grpc_client.get_text_generation_parameters()
+    expected_params = {
         "text": "string",
         "max_new_tokens": "int64",
         "min_new_tokens": "int64",
@@ -135,7 +136,6 @@ def test_get_text_generation_parameters(grpc_client):
         "top_p": "double",
         "typical_p": "double",
         "temperature": "double",
-        "seed": "uint64",
         "repetition_penalty": "double",
         "max_time": "double",
         "exponential_decay_length_penalty": {
@@ -143,8 +143,14 @@ def test_get_text_generation_parameters(grpc_client):
             "decay_factor": "double",
         },
         "stop_sequences": "string",
+        "seed": "uint64",
         "preserve_input_text": "bool",
+        "input_tokens": "bool",
+        "generated_tokens": "bool",
+        "token_logprobs": "bool",
+        "token_ranks": "bool",
     }
+    assert params == expected_params
 
 
 def test_models_info(grpc_client, using_real_caikit):
