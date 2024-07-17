@@ -8,6 +8,11 @@ text = "What is the boiling point of Nitrogen?"
 # Using the http client
 http_client = HttpClient(f"http://{host}:{http_port}")
 
+
+models = http_client.models_info()
+for model in models:
+    print(model)
+
 generated_text = http_client.generate_text("flan-t5-small-caikit", text)
 print(generated_text)
 # {"generated_text": "...", "generated_tokens": 15, "finish_reason": "EOS_TOKEN", "producer_id": {"name": "Text Generation", "version": "0.1.0"}, "input_token_count": 11, "seed": null}
@@ -21,6 +26,10 @@ print(generated_text)
 
 # using the grpc client using insecure (no encryption)
 grpc_client = GrpcClient(host=host, port=grpc_port, insecure=True)
+models = grpc_client.models_info()
+for model in models:
+    print(model)
+
 text = grpc_client.generate_text(
     "flan-t5-small-caikit", text, min_new_tokens=20, max_new_tokens=20
 )

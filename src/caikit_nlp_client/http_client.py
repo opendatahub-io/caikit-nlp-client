@@ -59,6 +59,7 @@ class HttpClient:
         self._api_base = base_url
         self._api_url = f"{base_url}{text_generation_endpoint}"
         self._stream_api_url = f"{base_url}{text_generation_stream_endpoint}"
+        self._models_info_url = f"{base_url}/info/models"
 
         if verify is False and ca_cert_path:
             raise ValueError("Cannot use verify=False with ca_cert_path")
@@ -303,3 +304,18 @@ class HttpClient:
         if kwargs:
             payload.update(parameters=kwargs)
         return payload
+
+    def models_info(
+        self,
+        timeout: float = 60.0,
+    ) -> dict[str, list[dict[str, Any]]]:
+        req_kwargs = self._get_tls_configuration()
+
+        response = requests.get(
+            self._models_info_url,
+            timeout=timeout,
+            **req_kwargs,  # type: ignore
+        )
+        response.raise_for_status()
+
+        return response.json()["models"]

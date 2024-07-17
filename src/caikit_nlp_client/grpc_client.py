@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 
 import grpc
 from google.protobuf.descriptor_pool import DescriptorPool
+from google.protobuf.json_format import MessageToDict
 from google.protobuf.message_factory import GetMessageClass
 from grpc_reflection.v1alpha.proto_reflection_descriptor_database import (
     ProtoReflectionDescriptorDatabase,
@@ -12,7 +13,12 @@ from grpc_reflection.v1alpha.proto_reflection_descriptor_database import (
 from .utils import get_server_certificate
 
 if TYPE_CHECKING:
-    from google._upb._message import Descriptor, Message
+    from google._upb._message import (
+        Descriptor,
+        Message,
+        MethodDescriptor,
+        ServiceDescriptor,
+    )
 
 log = logging.getLogger(__name__)
 
@@ -350,3 +356,34 @@ class GrpcClient:
         raise ValueError(
             f"{certificate=} should be a path to a certificate files or bytes"
         )
+
+    def models_info(self) -> list[dict[str, Any]]:
+        info_service: ServiceDescriptor = self._desc_pool.FindServiceByName(
+            "caikit.runtime.info.InfoService"
+        )
+
+        models_info: MethodDescriptor = info_service.methods_by_name["GetModelsInfo"]
+        ModelInfoRequest: Descriptor = GetMessageClass(
+            self._desc_pool.FindMessageTypeByName(models_info.input_type.full_name)
+        )
+        ModelInfoResponse: Descriptor = GetMessageClass(
+            self._desc_pool.FindMessageTypeByName(models_info.output_type.full_name)
+        )
+
+        get_models_info = self._channel.unary_unary(
+            f"/{info_service.full_name}/{models_info.name}",
+            request_serializer=ModelInfoRequest.SerializeToString,
+            response_deserializer=ModelInfoResponse.FromString,
+        )
+
+        models = get_models_info(ModelInfoRequest())
+
+        models_dict = MessageToDict(models)["models"]
+
+        # make sure that the output format matches the http client's
+        for model in models_dict:
+            model["model_path"] = model.pop("modelPath")
+            model["module_id"] = model.pop("moduleId")
+            model["module_metadata"] = model.pop("moduleMetadata")
+
+        return models_dict
