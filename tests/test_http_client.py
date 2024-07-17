@@ -222,6 +222,24 @@ def test_get_text_generation_parameters(
     }
 
 
+def test_models_info(http_client, accept_self_signed_certs, using_real_caikit):
+    models_info = http_client.models_info()
+    expected_models_number = 1 if using_real_caikit else 3
+
+    assert len(models_info) == expected_models_number
+
+    required_fields = (
+        "loaded",
+        "metadata",
+        "model_path",
+        "module_id",
+        "module_metadata",
+        "name",
+        "size",
+    )
+    assert all(field in model for field in required_fields for model in models_info)
+
+
 @pytest.mark.parametrize("connection_type", [ConnectionType.TLS], indirect=True)
 def test_tls_enabled(
     model_name,

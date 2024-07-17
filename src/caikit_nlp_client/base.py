@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -32,4 +32,8 @@ class ClientBase(ABC):
         timeout: float,
         **kwargs,
     ) -> Iterable[str]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def models_info(self) -> list[dict[str, Any]]:
         raise NotImplementedError
