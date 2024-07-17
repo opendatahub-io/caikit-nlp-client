@@ -101,7 +101,7 @@ exclude = ["examples"]
 select = [ "E", "F", "UP", "B", "SIM", "I"]
 ignore = []
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "tests/conftest.py" = ["F403"]
 
