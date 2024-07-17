@@ -102,7 +102,7 @@ class HttpClient:
     def get_text_generation_parameters(
         self,
         timeout: float = 60.0,
-    ) -> dict[str, str]:
+    ) -> dict:
         """returns a dict with available fields and their type"""
         req_kwargs = self._get_tls_configuration()
 
@@ -119,10 +119,17 @@ class HttpClient:
 
         def simplify_parameter_schema(parameters: dict) -> dict:
             """recursively flattens openapi's spec into a human-friendly dict"""
-            assert not len(parameters) > 1, "parameters should be a list of 1 dict 🤷"
+
+            if "$ref" in parameters["allOf"][0]:
+                value = parameters["allOf"][0]["$ref"]
+                prefix, name = value.rsplit("/", maxsplit=1)
+                assert prefix == "#/components/schemas"
+                params = openapi_spec["components"]["schemas"][name]["properties"]
+            else:
+                params = parameters["allOf"][0]["properties"]
 
             flattened = {}
-            for param, description in parameters["allOf"][0]["properties"].items():
+            for param, description in params.items():
                 if "allOf" in description:
                     flattened[param] = simplify_parameter_schema(description)
                 else:

@@ -201,7 +201,8 @@ def test_request_exception_handling(
 def test_get_text_generation_parameters(
     http_client, monkeysession, accept_self_signed_certs
 ):
-    assert http_client.get_text_generation_parameters() == {
+    params = http_client.get_text_generation_parameters()
+    expected_params = {
         "max_new_tokens": "integer",
         "min_new_tokens": "integer",
         "truncate_input_tokens": "integer",
@@ -219,7 +220,12 @@ def test_get_text_generation_parameters(
         "stop_sequences": "array",
         "seed": "integer",
         "preserve_input_text": "boolean",
+        "input_tokens": "boolean",
+        "generated_tokens": "boolean",
+        "token_logprobs": "boolean",
+        "token_ranks": "boolean",
     }
+    assert params == expected_params
 
 
 def test_models_info(http_client, accept_self_signed_certs, using_real_caikit):
