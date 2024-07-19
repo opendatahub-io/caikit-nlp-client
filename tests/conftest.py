@@ -22,10 +22,10 @@ def monkeysession():
 
 
 @pytest.fixture
-def model_name(request: pytest.FixtureRequest):
+def model_name(request: pytest.FixtureRequest, using_real_caikit):
     """name of the model utilized by the tests. Has to be in `tests/tiny_models`"""
     # Note that this can be overridden in tests via indirect parametrization
-    if "caikit_tgis_service" in request.fixturenames:
+    if using_real_caikit:
         return "flan-t5-small-caikit"
 
     available_models = [
