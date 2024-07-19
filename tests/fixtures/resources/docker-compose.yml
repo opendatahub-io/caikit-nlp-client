@@ -3,7 +3,7 @@ services:
     image: quay.io/opendatahub/caikit-tgis-serving:fast
     platform: linux/amd64 # allows running this image on apple silicon
     volumes:
-      - ./flan-t5-small-caikit/:/mnt/models/ # downloaded when running tests
+      - ./flan-t5-small-caikit/:/mnt/models/flan-t5-small-caikit # downloaded when running tests
       - ./caikit-tgis.yml:/caikit/config/caikit.yml
     ports:
       - 8085:8085 # grpc
