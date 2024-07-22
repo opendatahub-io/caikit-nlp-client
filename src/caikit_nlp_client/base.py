@@ -9,7 +9,6 @@ class ClientBase(ABC):
     @abstractmethod
     def get_text_generation_parameters(
         self,
-        timeout: float,
         **kwargs,
     ) -> dict[str, str]:
         raise NotImplementedError
@@ -19,7 +18,6 @@ class ClientBase(ABC):
         self,
         model_id: str,
         text: str,
-        timeout: float,
         **kwargs,
     ) -> str:
         raise NotImplementedError
@@ -29,7 +27,6 @@ class ClientBase(ABC):
         self,
         model_id: str,
         text: str,
-        timeout: float,
         **kwargs,
     ) -> Iterable[str]:
         raise NotImplementedError
