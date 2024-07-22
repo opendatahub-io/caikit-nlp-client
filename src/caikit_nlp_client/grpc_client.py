@@ -388,3 +388,198 @@ class GrpcClient:
             model["module_metadata"] = model.pop("moduleMetadata")
 
         return models_dict
+
+    def _make_request(
+        self,
+        method_name: str,
+        service_name: str = "caikit.runtime.Nlp.NlpService",
+        **kwargs,
+    ):
+        service: ServiceDescriptor = self._desc_pool.FindServiceByName(service_name)
+
+        method: MethodDescriptor = service.methods_by_name[method_name]
+        Request: Message = GetMessageClass(method.input_type)
+        Response: Message = GetMessageClass(method.output_type)
+
+        endpoint = f"/{service.full_name}/{method.name}"
+        make_request = self._channel.unary_unary(
+            endpoint,
+            request_serializer=Request.SerializeToString,
+            response_deserializer=Response.FromString,
+        )
+
+        if "model_id" in kwargs:
+            model_id = kwargs.pop("model_id")
+            metadata = [("mm-model-id", model_id)]
+        else:
+            metadata = None
+
+        log.debug(f"making request to {endpoint=}, {metadata=}")
+        response = MessageToDict(make_request(Request(**kwargs), metadata=metadata))
+        log.debug(f"Response: {response}")
+
+        return response
+
+    def embedding(
+        self,
+        model_id: str,
+        text: str,
+        truncate_input_tokens: Optional[bool] = None,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        response = self._make_request(
+            method_name="EmbeddingTaskPredict",
+            model_id=model_id,
+            text=text,
+            truncate_input_tokens=truncate_input_tokens,
+        )
+
+        response["producer_id"] = response.pop("producerId")
+        response["input_token_count"] = response.pop("inputTokenCount")
+        response["result"]["data"] = response["result"].pop("dataNpfloat32sequence")
+        return response
+
+    def embeddings(
+        self,
+        model_id: str,
+        texts: list[str],
+        truncate_input_tokens: Optional[int] = None,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        response = self._make_request(
+            method_name="EmbeddingTasksPredict",
+            model_id=model_id,
+            texts=texts,
+            truncate_input_tokens=truncate_input_tokens,
+        )
+        response["producer_id"] = response.pop("producerId")
+        response["input_token_count"] = response.pop("inputTokenCount")
+
+        for vec_dict in response["results"]["vectors"]:
+            vec_dict["data"] = vec_dict.pop("dataNpfloat32sequence")
+
+        return response
+
+    def sentence_similarity(
+        self,
+        model_id: str,
+        source_sentence: str,
+        sentences: list[str],
+        truncate_input_tokens: Optional[int] = None,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        return self._make_request(
+            method_name="SentenceSimilarityTaskPredict",
+            model_id=model_id,
+            source_sentence=source_sentence,
+            sentences=sentences,
+            truncate_input_tokens=truncate_input_tokens,
+        )
+
+    def sentence_similarity_tasks(
+        self,
+        model_id: str,
+        source_sentences: list[str],
+        sentences: list[str],
+        truncate_input_tokens: Optional[int] = None,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        return self._make_request(
+            method_name="SentenceSimilarityTasksPredict",
+            model_id=model_id,
+            source_sentences=source_sentences,
+            sentences=sentences,
+            truncate_input_tokens=truncate_input_tokens,
+        )
+
+    def rerank(
+        self,
+        model_id: str,
+        documents: list[dict[str, Any]],
+        query: str,
+        top_n: Optional[int] = None,
+        truncate_input_tokens: Optional[int] = None,
+        return_documents: Optional[bool] = False,
+        return_query: Optional[bool] = False,
+        return_text: Optional[bool] = False,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        if not all(isinstance(doc, dict) for doc in documents):
+            raise ValueError('documents should be a list of dicts {"text": <text>}')
+
+        Struct: Message = GetMessageClass(
+            self._desc_pool.FindMessageTypeByName("google.protobuf.Struct")
+        )
+
+        docs = []
+        for doc in documents:
+            d = Struct()
+            d.update(doc)
+            docs.append(d)
+
+        response = self._make_request(
+            method_name="RerankTaskPredict",
+            model_id=model_id,
+            documents=docs,
+            top_n=top_n,
+            truncate_input_tokens=truncate_input_tokens,
+            return_documents=return_documents,
+            return_query=return_query,
+            return_text=return_text,
+        )
+        response["producer_id"] = response.pop("producerId")
+        response["input_token_count"] = response.pop("inputTokenCount")
+
+        return response
+
+    def rerank_tasks(
+        self,
+        model_id: str,
+        documents: list[dict[str, Any]],
+        queries: list[str],
+        top_n: Optional[int] = None,
+        truncate_input_tokens: Optional[int] = None,
+        return_documents: Optional[bool] = False,
+        return_query: Optional[bool] = False,
+        return_text: Optional[bool] = False,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        if not all(isinstance(doc, dict) for doc in documents):
+            raise ValueError("documents should be a list of dicts")
+
+        Struct: Message = GetMessageClass(
+            self._desc_pool.FindMessageTypeByName("google.protobuf.Struct")
+        )
+
+        docs = []
+        for doc in documents:
+            d = Struct()
+            d.update(doc)
+            docs.append(d)
+
+        response = self._make_request(
+            method_name="RerankTaskPredict",
+            model_id=model_id,
+            documents=docs,
+            top_n=top_n,
+            truncate_input_tokens=truncate_input_tokens,
+            return_documents=return_documents,
+            return_query=return_query,
+            return_text=return_text,
+        )
+        response["producer_id"] = response.pop("producerId")
+        response["input_token_count"] = response.pop("inputTokenCount")
+
+        return response
