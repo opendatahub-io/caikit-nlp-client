@@ -124,7 +124,7 @@ def test_request_exception_handling(
         list(streaming_response)
 
 
-def test_get_text_generation_parameters(grpc_client):
+def test_get_text_generation_parameters(grpc_client: GrpcClient):
     params = grpc_client.get_text_generation_parameters()
     expected_params = {
         "text": "string",
@@ -153,7 +153,7 @@ def test_get_text_generation_parameters(grpc_client):
     assert params == expected_params
 
 
-def test_models_info(grpc_client, using_real_caikit):
+def test_models_info(grpc_client: GrpcClient, using_real_caikit):
     models_info = grpc_client.models_info()
     expected_models_number = 1 if using_real_caikit else 4
 
@@ -168,6 +168,131 @@ def test_models_info(grpc_client, using_real_caikit):
         "size",
     )
     assert all(field in model for field in required_fields for model in models_info)
+
+
+def test_embedding(
+    grpc_client: GrpcClient, embedding_model_name, prompt, using_real_caikit
+):
+    if using_real_caikit:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    with pytest.raises(ValueError, match="request must have a model id"):
+        grpc_client.embedding(model_id=None, text=prompt)  # type: ignore
+
+    response = grpc_client.embedding(model_id=embedding_model_name, text=prompt)
+    assert "result" in response
+    assert "data" in response["result"]
+    assert "producer_id" in response
+    assert response["producer_id"]["name"] == "EmbeddingModule"
+
+
+def test_embeddings(
+    grpc_client: GrpcClient, embedding_model_name, prompt, using_real_caikit
+):
+    if using_real_caikit:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    response = grpc_client.embeddings(
+        model_id=embedding_model_name,
+        texts=[prompt, prompt + prompt],
+    )
+
+    assert response["results"]
+    assert "producer_id" in response
+
+    vectors = response["results"]["vectors"]
+    assert len(vectors) == 2
+    assert all("data" in vec for vec in vectors)
+    assert "input_token_count" in response
+
+
+def test_sentence_similarity(
+    grpc_client: GrpcClient, embedding_model_name, prompt, using_real_caikit
+):
+    if using_real_caikit:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    response = grpc_client.sentence_similarity(
+        model_id=embedding_model_name,
+        source_sentence="source text",
+        sentences=["source sent", "source tex"],
+    )
+    assert "result" in response
+    assert "scores" in response["result"]
+    assert len(response["result"]["scores"]) == 2
+
+
+def test_sentence_similarity_tasks(
+    grpc_client: GrpcClient, embedding_model_name, prompt, using_real_caikit
+):
+    if using_real_caikit:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    response = grpc_client.sentence_similarity_tasks(
+        embedding_model_name,
+        ["source text", "text 2"],
+        ["source sent", "source tex"],
+    )
+    assert "results" in response
+    assert len(response["results"]) == 2
+    assert all("scores" in el for el in response["results"])
+    assert len(response["results"][0]["scores"]) == 2
+    assert len(response["results"][1]["scores"]) == 2
+
+
+def test_rerank(
+    grpc_client: GrpcClient, embedding_model_name, prompt, using_real_caikit
+):
+    if using_real_caikit:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    documents = [
+        {"doc1": 1},
+        {"doc2": 2},
+    ]
+
+    query = "what's this"
+
+    response = grpc_client.rerank(
+        model_id=embedding_model_name,
+        documents=documents,
+        query=query,
+    )
+
+    assert "result" in response
+    assert "scores" in response["result"]
+    assert "producer_id" in response
+    assert response["producer_id"]["name"] == "EmbeddingModule"
+
+    assert len(response["result"]["scores"]) == 2
+
+
+def test_rerank_tasks(
+    grpc_client: GrpcClient, embedding_model_name, prompt, using_real_caikit
+):
+    if using_real_caikit:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    documents = [
+        {"doc1": 1},
+        {"doc2": 2},
+    ]
+    queries = [
+        "query1",
+        "query2",
+    ]
+    response = grpc_client.rerank_tasks(
+        model_id=embedding_model_name,
+        documents=documents,
+        queries=queries,
+    )
+
+    assert "result" in response
+    assert "scores" in response["result"]
+    assert "producer_id" in response
+    assert response["producer_id"]["name"] == "EmbeddingModule"
+
+    assert len(response["result"]["scores"]) == 2
 
 
 def test_invalid_init_options(grpc_server):
