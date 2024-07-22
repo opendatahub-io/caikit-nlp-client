@@ -75,7 +75,7 @@ def test_generate_text_stream_with_optional_args(
     assert response_list
     assert all(isinstance(text, str) for text in response_list)
 
-    with pytest.raises(ValueError, match="Unsupported kwarg key='invalid_kwarg'"):
+    with pytest.raises(ValueError, match="Unsupported kwarg: invalid_kwarg=42"):
         grpc_client.generate_text(model_name, "dummy", invalid_kwarg=42)
 
 
