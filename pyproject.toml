@@ -62,7 +62,7 @@ tests = [
     "pytest-mock",
     "coverage[toml]",
     "grpcio-health-checking",
-    "caikit-nlp==0.4.16",
+    "caikit-nlp==0.4.17",
     "caikit[runtime-grpc,runtime-http]>=0.23.2,<0.27.0",
 ]
 
