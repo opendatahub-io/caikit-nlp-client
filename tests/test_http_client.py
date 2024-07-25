@@ -245,6 +245,95 @@ def test_models_info(http_client, accept_self_signed_certs, using_real_caikit):
     )
     assert all(field in model for field in required_fields for model in models_info)
 
+def test_embedding(http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs):
+    resp = http_client.embedding(model_name, "Sample text")
+    assert "result" in resp and "data" in resp["result"] and "values" in resp["result"]["data"]
+
+def test_embedding_tasks(http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs):
+    resp = http_client.embedding_tasks(model_name, ["Sample text", "Sample text 2"])
+    assert "results" in resp and "vectors" in resp["result"]
+
+def test_sentence_similarity(http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs):
+    resp = http_client.sentence_similarity(model_name, "source text", ["source sent", "source tex"])
+    assert "result" in resp and "scores" in resp["result"] and len(resp["result"]["scores"]) == 2
+
+def test_sentence_similarity_tasks(http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs):
+    resp = http_client.sentence_similarity_tasks(model_name, ["source text", "text 2"], ["source sent", "source tex"])
+    assert "results" in resp and "scores" in resp["results"]
+    assert len(resp["results"]) == 2 and len(resp["results"][0]["scores"]) == 2
+
+def test_rerank(http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs):
+    resp = http_client.rerank(model_name, [{"doc1": 1}], "doc")
+    assert "result" in resp and "scores" in resp["result"] and "document" in resp["result"]["scores"][0]
+
+def test_rerank_tasks(http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs):
+    resp = http_client.rerank_tasks(model_name, [{"doc1": 1}], ["doc"])
+    assert "results" in resp and len(resp["results"]) == 1 and "scores" in resp["results"][0]
+    assert "document" in resp["results"][0]["scores"]
+
+def test_embedding(
+    http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs
+):
+    resp = http_client.embedding(model_name, "Sample text")
+    assert (
+        "result" in resp
+        and "data" in resp["result"]
+        and "values" in resp["result"]["data"]
+    )
+
+
+def test_embedding_tasks(
+    http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs
+):
+    resp = http_client.embedding_tasks(model_name, ["Sample text", "Sample text 2"])
+    assert "results" in resp and "vectors" in resp["result"]
+
+
+def test_sentence_similarity(
+    http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs
+):
+    resp = http_client.sentence_similarity(
+        model_name, "source text", ["source sent", "source tex"]
+    )
+    assert (
+        "result" in resp
+        and "scores" in resp["result"]
+        and len(resp["result"]["scores"]) == 2
+    )
+
+
+def test_sentence_similarity_tasks(
+    http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs
+):
+    resp = http_client.sentence_similarity_tasks(
+        model_name, ["source text", "text 2"], ["source sent", "source tex"]
+    )
+    assert "results" in resp and "scores" in resp["results"]
+    assert len(resp["results"]) == 2 and len(resp["results"][0]["scores"]) == 2
+
+
+def test_rerank(
+    http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs
+):
+    resp = http_client.rerank(model_name, [{"doc1": 1}], "doc")
+    assert (
+        "result" in resp
+        and "scores" in resp["result"]
+        and "document" in resp["result"]["scores"][0]
+    )
+
+
+def test_rerank_tasks(
+    http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs
+):
+    resp = http_client.rerank_tasks(model_name, [{"doc1": 1}], ["doc"])
+    assert (
+        "results" in resp
+        and len(resp["results"]) == 1
+        and "scores" in resp["results"][0]
+    )
+    assert "document" in resp["results"][0]["scores"]
+
 
 @pytest.mark.parametrize("connection_type", [ConnectionType.TLS], indirect=True)
 def test_tls_enabled(
