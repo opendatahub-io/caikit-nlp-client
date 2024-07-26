@@ -1,0 +1,7 @@
+{
+  "__version__": {
+    "sentence_transformers": "2.3.1",
+    "transformers": "4.43.2",
+    "pytorch": "2.2.2+cu121"
+  }
+}

@@ -230,7 +230,7 @@ def test_get_text_generation_parameters(
 
 def test_models_info(http_client, accept_self_signed_certs, using_real_caikit):
     models_info = http_client.models_info()
-    expected_models_number = 1 if using_real_caikit else 3
+    expected_models_number = 1 if using_real_caikit else 4
 
     assert len(models_info) == expected_models_number
 
@@ -247,27 +247,53 @@ def test_models_info(http_client, accept_self_signed_certs, using_real_caikit):
 
 
 def test_embedding(
-    http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs
+    http_client: HttpClient,
+    embedding_model_name,
+    prompt,
+    mocker,
+    accept_self_signed_certs,
+    using_real_caikit,
 ):
-    resp = http_client.embedding(model_name, "Sample text")
+    if using_real_caikit:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    resp = http_client.embedding(embedding_model_name, "Sample text")
     assert "result" in resp
     assert "data" in resp["result"]
     assert "values" in resp["result"]["data"]
 
 
 def test_embedding_tasks(
-    http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs
+    http_client: HttpClient,
+    embedding_model_name,
+    prompt,
+    mocker,
+    accept_self_signed_certs,
+    using_real_caikit,
 ):
-    resp = http_client.embedding_tasks(model_name, ["Sample text", "Sample text 2"])
+    if using_real_caikit:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    resp = http_client.embedding_tasks(
+        embedding_model_name, ["Sample text", "Sample text 2"]
+    )
     assert "results" in resp
     assert "vectors" in resp["result"]
 
 
 def test_sentence_similarity(
-    http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs
+    http_client: HttpClient,
+    embedding_model_name,
+    prompt,
+    mocker,
+    accept_self_signed_certs,
+    using_real_caikit,
 ):
+    if using_real_caikit:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
     resp = http_client.sentence_similarity(
-        model_name, "source text", ["source sent", "source tex"]
+        embedding_model_name, "source text", ["source sent", "source tex"]
     )
     assert "result" in resp
     assert "scores" in resp["result"]
@@ -275,10 +301,18 @@ def test_sentence_similarity(
 
 
 def test_sentence_similarity_tasks(
-    http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs
+    http_client: HttpClient,
+    embedding_model_name,
+    prompt,
+    mocker,
+    accept_self_signed_certs,
+    using_real_caikit,
 ):
+    if using_real_caikit:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
     resp = http_client.sentence_similarity_tasks(
-        model_name, ["source text", "text 2"], ["source sent", "source tex"]
+        embedding_model_name, ["source text", "text 2"], ["source sent", "source tex"]
     )
     assert "results" in resp
     assert "scores" in resp["results"]
@@ -287,18 +321,34 @@ def test_sentence_similarity_tasks(
 
 
 def test_rerank(
-    http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs
+    http_client: HttpClient,
+    embedding_model_name,
+    prompt,
+    mocker,
+    accept_self_signed_certs,
+    using_real_caikit,
 ):
-    resp = http_client.rerank(model_name, [{"doc1": 1}], "doc")
+    if using_real_caikit:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    resp = http_client.rerank(embedding_model_name, [{"doc1": 1}], "doc")
     assert "result" in resp
     assert "scores" in resp["result"]
     assert "document" in resp["result"]["scores"][0]
 
 
 def test_rerank_tasks(
-    http_client: HttpClient, model_name, prompt, mocker, accept_self_signed_certs
+    http_client: HttpClient,
+    embedding_model_name,
+    prompt,
+    mocker,
+    accept_self_signed_certs,
+    using_real_caikit,
 ):
-    resp = http_client.rerank_tasks(model_name, [{"doc1": 1}], ["doc"])
+    if using_real_caikit:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    resp = http_client.rerank_tasks(embedding_model_name, [{"doc1": 1}], ["doc"])
     assert "results" in resp
     assert len(resp["results"]) == 1
     assert "scores" in resp["results"][0]
