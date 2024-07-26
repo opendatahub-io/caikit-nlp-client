@@ -36,6 +36,11 @@ def model_name(request: pytest.FixtureRequest, using_real_caikit):
     return available_models[0]
 
 
+@pytest.fixture
+def embedding_model_name(model_name: str):
+    return f"{model_name}-embedding"
+
+
 @pytest.fixture(
     scope="session",
     params=[ConnectionType.INSECURE, ConnectionType.TLS, ConnectionType.MTLS],

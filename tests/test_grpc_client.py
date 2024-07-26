@@ -155,7 +155,7 @@ def test_get_text_generation_parameters(grpc_client):
 
 def test_models_info(grpc_client, using_real_caikit):
     models_info = grpc_client.models_info()
-    expected_models_number = 1 if using_real_caikit else 3
+    expected_models_number = 1 if using_real_caikit else 4
 
     assert len(models_info) == expected_models_number
     required_fields = (

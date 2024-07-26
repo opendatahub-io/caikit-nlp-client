@@ -1,4 +1,4 @@
-exclude: "^caikit_nlp/generated/$|protobuf|_pb2(_grpc)?.pyi?$"
+exclude: "^(caikit_nlp/generated/$|protobuf|_pb2(_grpc)?.pyi?|tests/tiny_models/.*)$"
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
