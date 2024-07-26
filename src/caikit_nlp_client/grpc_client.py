@@ -3,12 +3,13 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 import grpc
-from google.protobuf.descriptor_pool import DescriptorPool
-from google.protobuf.json_format import MessageToDict
-from google.protobuf.message_factory import GetMessageClass
 from grpc_reflection.v1alpha.proto_reflection_descriptor_database import (
     ProtoReflectionDescriptorDatabase,
 )
+
+from google.protobuf.descriptor_pool import DescriptorPool
+from google.protobuf.json_format import MessageToDict
+from google.protobuf.message_factory import GetMessageClass
 
 from .utils import get_server_certificate
 
