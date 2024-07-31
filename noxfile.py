@@ -1,4 +1,5 @@
 """Nox sessions."""
+
 import glob
 import os
 import shlex
