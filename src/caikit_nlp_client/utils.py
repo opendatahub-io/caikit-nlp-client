@@ -19,9 +19,10 @@ def get_server_certificate(host: str, port: int) -> str:
 
     context = ssl.SSLContext()
 
-    with socket.create_connection((host, port)) as sock, context.wrap_socket(
-        sock, server_hostname=host
-    ) as ssock:
+    with (
+        socket.create_connection((host, port)) as sock,
+        context.wrap_socket(sock, server_hostname=host) as ssock,
+    ):
         cert_der = ssock.getpeercert(binary_form=True)
 
     assert cert_der

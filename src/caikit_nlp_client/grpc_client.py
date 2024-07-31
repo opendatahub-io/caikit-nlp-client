@@ -1,4 +1,5 @@
 import logging
+import re
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Optional, Union
 
@@ -83,31 +84,9 @@ class GrpcClient:
         self._reflection_db = ProtoReflectionDescriptorDatabase(self._channel)
         self._desc_pool = DescriptorPool(self._reflection_db)
         try:
-            self._text_generation_task_request = GetMessageClass(
-                self._desc_pool.FindMessageTypeByName(
-                    "caikit.runtime.Nlp.TextGenerationTaskRequest"
-                )
-            )
-            self._task_text_generation_request = GetMessageClass(
-                self._desc_pool.FindMessageTypeByName(
-                    "caikit.runtime.Nlp.ServerStreamingTextGenerationTaskRequest"
-                )
-            )
-            self._generated_text_result = GetMessageClass(
-                self._desc_pool.FindMessageTypeByName(
-                    "caikit_data_model.nlp.GeneratedTextResult"
-                )
-            )
-            self._task_predict = self._channel.unary_unary(
-                "/caikit.runtime.Nlp.NlpService/TextGenerationTaskPredict",
-                request_serializer=self._text_generation_task_request.SerializeToString,
-                response_deserializer=self._generated_text_result.FromString,
-            )
-            self._streaming_task_predict = self._channel.unary_stream(
-                "/caikit.runtime.Nlp.NlpService/ServerStreamingTextGenerationTaskPredict",
-                request_serializer=self._task_text_generation_request.SerializeToString,
-                response_deserializer=self._generated_text_result.FromString,
-            )
+            # call the models info endpoint to make sure that the connection works
+            models = self.models_info()
+            log.info(f"Available models: {models}")
         except grpc._channel._MultiThreadedRendezvous as exc:
             log.error("Could not connect to the server: %s", exc.details())
             raise RuntimeError(
@@ -146,24 +125,28 @@ class GrpcClient:
             raise ValueError("request must have a model id")
 
         log.info(f"Calling generate_text for '{model_id}'")
-        metadata = [("mm-model-id", model_id)]
 
-        request = self._text_generation_task_request()
-
-        self._populate_request(request, text, **kwargs)
         try:
-            response = self._task_predict(request=request, metadata=metadata)
+            result = self._make_request(
+                method_name="TextGenerationTaskPredict",
+                model_id=model_id,
+                text=text,
+                **kwargs,
+            )
         except grpc._channel._InactiveRpcError as exc:
             raise RuntimeError(exc.details()) from None
 
-        log.debug(f"Response: {response}")
-        result = response.generated_text
         log.info("Calling generate_text was successful")
-        return result
+        return result["generatedText"]
 
     def get_text_generation_parameters(self) -> dict[str, Any]:
         """returns a dict with available fields and their type"""
-        descriptor: Descriptor = self._task_text_generation_request.DESCRIPTOR
+        service: ServiceDescriptor = self._desc_pool.FindServiceByName(
+            "caikit.runtime.Nlp.NlpService"
+        )
+
+        method: MethodDescriptor = service.methods_by_name["TextGenerationTaskPredict"]
+        descriptor: Descriptor = method.input_type
 
         # hack: used map the grpc type (int) to a human-readable string
         grpc_type_to_str = {
@@ -240,27 +223,41 @@ class GrpcClient:
 
         metadata = [("mm-model-id", model_id)]
 
-        request = self._task_text_generation_request()
-        self._populate_request(request, text, **kwargs)
+        service_name = "caikit.runtime.Nlp.NlpService"
+        service: ServiceDescriptor = self._desc_pool.FindServiceByName(service_name)
+        method: MethodDescriptor = service.methods_by_name[
+            "ServerStreamingTextGenerationTaskPredict"
+        ]
+
+        Request: Message = GetMessageClass(method.input_type)
+        Response: Message = GetMessageClass(method.output_type)
+
+        endpoint = f"/{service.full_name}/{method.name}"
+        make_request = self._channel.unary_stream(
+            endpoint,
+            request_serializer=Request.SerializeToString,
+            response_deserializer=Response.FromString,
+        )
+        try:
+            request = Request(text=text, **kwargs)
+        except ValueError as exc:
+            if match := re.match('Protocol message .* has no "(.*)" field.', str(exc)):
+                key = match.group(1)
+                error = f"Unsupported kwarg: {key}={kwargs.get(key)}"
+                raise ValueError(error) from None
+
+            raise
 
         try:
             yield from (
                 message.generated_text
-                for message in self._streaming_task_predict(
-                    metadata=metadata, request=request
+                for message in make_request(
+                    request=request,
+                    metadata=metadata,
                 )
             )
         except grpc._channel._MultiThreadedRendezvous as exc:
             raise RuntimeError(exc.details()) from None
-
-    def _populate_request(self, request: "Message", text: str, **kwargs):
-        """dynamically converts kwargs to request attributes."""
-        request.text = text
-        for key, value in kwargs.items():
-            try:
-                setattr(request, key, value)
-            except AttributeError as exc:
-                raise ValueError(f"Unsupported kwarg {key=}") from exc
 
     def _close(self):
         try:
@@ -359,27 +356,12 @@ class GrpcClient:
         )
 
     def models_info(self) -> list[dict[str, Any]]:
-        info_service: ServiceDescriptor = self._desc_pool.FindServiceByName(
-            "caikit.runtime.info.InfoService"
+        response = self._make_request(
+            method_name="GetModelsInfo",
+            service_name="caikit.runtime.info.InfoService",
         )
 
-        models_info: MethodDescriptor = info_service.methods_by_name["GetModelsInfo"]
-        ModelInfoRequest: Descriptor = GetMessageClass(
-            self._desc_pool.FindMessageTypeByName(models_info.input_type.full_name)
-        )
-        ModelInfoResponse: Descriptor = GetMessageClass(
-            self._desc_pool.FindMessageTypeByName(models_info.output_type.full_name)
-        )
-
-        get_models_info = self._channel.unary_unary(
-            f"/{info_service.full_name}/{models_info.name}",
-            request_serializer=ModelInfoRequest.SerializeToString,
-            response_deserializer=ModelInfoResponse.FromString,
-        )
-
-        models = get_models_info(ModelInfoRequest())
-
-        models_dict = MessageToDict(models)["models"]
+        models_dict = response["models"]
 
         # make sure that the output format matches the http client's
         for model in models_dict:
@@ -388,3 +370,211 @@ class GrpcClient:
             model["module_metadata"] = model.pop("moduleMetadata")
 
         return models_dict
+
+    def _make_request(
+        self,
+        method_name: str,
+        service_name: str = "caikit.runtime.Nlp.NlpService",
+        **kwargs,
+    ):
+        service: ServiceDescriptor = self._desc_pool.FindServiceByName(service_name)
+
+        method: MethodDescriptor = service.methods_by_name[method_name]
+        Request: Message = GetMessageClass(method.input_type)
+        Response: Message = GetMessageClass(method.output_type)
+
+        endpoint = f"/{service.full_name}/{method.name}"
+        make_request = self._channel.unary_unary(
+            endpoint,
+            request_serializer=Request.SerializeToString,
+            response_deserializer=Response.FromString,
+        )
+
+        if "model_id" in kwargs:
+            model_id = kwargs.pop("model_id")
+            metadata = [("mm-model-id", model_id)]
+        else:
+            metadata = None
+
+        log.debug(f"making request to {endpoint=}, {metadata=}")
+        try:
+            request = Request(**kwargs)
+        except ValueError as exc:
+            if match := re.match('Protocol message .* has no "(.*)" field.', str(exc)):
+                key = match.group(1)
+                error = f"Unsupported kwarg: {key}={kwargs.get(key)}"
+                raise ValueError(error) from None
+
+            raise
+
+        response = make_request(
+            request,
+            metadata=metadata,
+        )
+        log.debug(f"Response: {response}")
+
+        return MessageToDict(response)
+
+    def embedding(
+        self,
+        model_id: str,
+        text: str,
+        truncate_input_tokens: Optional[bool] = None,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        response = self._make_request(
+            method_name="EmbeddingTaskPredict",
+            model_id=model_id,
+            text=text,
+            truncate_input_tokens=truncate_input_tokens,
+        )
+
+        response["producer_id"] = response.pop("producerId")
+        response["input_token_count"] = response.pop("inputTokenCount")
+        response["result"]["data"] = response["result"].pop("dataNpfloat32sequence")
+        return response
+
+    def embeddings(
+        self,
+        model_id: str,
+        texts: list[str],
+        truncate_input_tokens: Optional[int] = None,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        response = self._make_request(
+            method_name="EmbeddingTasksPredict",
+            model_id=model_id,
+            texts=texts,
+            truncate_input_tokens=truncate_input_tokens,
+        )
+        response["producer_id"] = response.pop("producerId")
+        response["input_token_count"] = response.pop("inputTokenCount")
+
+        for vec_dict in response["results"]["vectors"]:
+            vec_dict["data"] = vec_dict.pop("dataNpfloat32sequence")
+
+        return response
+
+    def sentence_similarity(
+        self,
+        model_id: str,
+        source_sentence: str,
+        sentences: list[str],
+        truncate_input_tokens: Optional[int] = None,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        return self._make_request(
+            method_name="SentenceSimilarityTaskPredict",
+            model_id=model_id,
+            source_sentence=source_sentence,
+            sentences=sentences,
+            truncate_input_tokens=truncate_input_tokens,
+        )
+
+    def sentence_similarity_tasks(
+        self,
+        model_id: str,
+        source_sentences: list[str],
+        sentences: list[str],
+        truncate_input_tokens: Optional[int] = None,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        return self._make_request(
+            method_name="SentenceSimilarityTasksPredict",
+            model_id=model_id,
+            source_sentences=source_sentences,
+            sentences=sentences,
+            truncate_input_tokens=truncate_input_tokens,
+        )
+
+    def rerank(
+        self,
+        model_id: str,
+        documents: list[dict[str, Any]],
+        query: str,
+        top_n: Optional[int] = None,
+        truncate_input_tokens: Optional[int] = None,
+        return_documents: Optional[bool] = False,
+        return_query: Optional[bool] = False,
+        return_text: Optional[bool] = False,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        if not all(isinstance(doc, dict) for doc in documents):
+            raise ValueError('documents should be a list of dicts {"text": <text>}')
+
+        Struct: Message = GetMessageClass(
+            self._desc_pool.FindMessageTypeByName("google.protobuf.Struct")
+        )
+
+        docs = []
+        for doc in documents:
+            d = Struct()
+            d.update(doc)
+            docs.append(d)
+
+        response = self._make_request(
+            method_name="RerankTaskPredict",
+            model_id=model_id,
+            documents=docs,
+            top_n=top_n,
+            truncate_input_tokens=truncate_input_tokens,
+            return_documents=return_documents,
+            return_query=return_query,
+            return_text=return_text,
+        )
+        response["producer_id"] = response.pop("producerId")
+        response["input_token_count"] = response.pop("inputTokenCount")
+
+        return response
+
+    def rerank_tasks(
+        self,
+        model_id: str,
+        documents: list[dict[str, Any]],
+        queries: list[str],
+        top_n: Optional[int] = None,
+        truncate_input_tokens: Optional[int] = None,
+        return_documents: Optional[bool] = False,
+        return_query: Optional[bool] = False,
+        return_text: Optional[bool] = False,
+    ) -> dict[str, Any]:
+        if not model_id:
+            raise ValueError("request must have a model id")
+
+        if not all(isinstance(doc, dict) for doc in documents):
+            raise ValueError("documents should be a list of dicts")
+
+        Struct: Message = GetMessageClass(
+            self._desc_pool.FindMessageTypeByName("google.protobuf.Struct")
+        )
+
+        docs = []
+        for doc in documents:
+            d = Struct()
+            d.update(doc)
+            docs.append(d)
+
+        response = self._make_request(
+            method_name="RerankTaskPredict",
+            model_id=model_id,
+            documents=docs,
+            top_n=top_n,
+            truncate_input_tokens=truncate_input_tokens,
+            return_documents=return_documents,
+            return_query=return_query,
+            return_text=return_text,
+        )
+        response["producer_id"] = response.pop("producerId")
+        response["input_token_count"] = response.pop("inputTokenCount")
+
+        return response

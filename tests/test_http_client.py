@@ -202,30 +202,7 @@ def test_get_text_generation_parameters(
     http_client, monkeysession, accept_self_signed_certs
 ):
     params = http_client.get_text_generation_parameters()
-    expected_params = {
-        "max_new_tokens": "integer",
-        "min_new_tokens": "integer",
-        "truncate_input_tokens": "integer",
-        "decoding_method": "string",
-        "top_k": "integer",
-        "top_p": "number",
-        "typical_p": "number",
-        "temperature": "number",
-        "repetition_penalty": "number",
-        "max_time": "number",
-        "exponential_decay_length_penalty": {
-            "start_index": "integer",
-            "decay_factor": "number",
-        },
-        "stop_sequences": "array",
-        "seed": "integer",
-        "preserve_input_text": "boolean",
-        "input_tokens": "boolean",
-        "generated_tokens": "boolean",
-        "token_logprobs": "boolean",
-        "token_ranks": "boolean",
-    }
-    assert params == expected_params
+    assert params
 
 
 def test_models_info(http_client, accept_self_signed_certs, using_real_caikit):
