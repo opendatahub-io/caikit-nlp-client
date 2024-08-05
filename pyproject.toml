@@ -51,7 +51,7 @@ dev = [
     "caikit_nlp_client[types]"
 ]
 types = [
-    "mypy==1.10.1",
+    "mypy==1.11.1",
     "types-requests>=2.22.0.10",
     "types-protobuf>=4.22.0.0"
 ]
