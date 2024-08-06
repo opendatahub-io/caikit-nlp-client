@@ -22,10 +22,10 @@ def monkeysession():
 
 
 @pytest.fixture
-def model_name(request: pytest.FixtureRequest, using_real_caikit):
+def model_name(request: pytest.FixtureRequest, using_tgis_backend):
     """name of the model utilized by the tests. Has to be in `tests/tiny_models`"""
     # Note that this can be overridden in tests via indirect parametrization
-    if using_real_caikit:
+    if using_tgis_backend:
         return "flan-t5-small-caikit"
 
     available_models = [
@@ -57,7 +57,7 @@ def caikit_nlp_runtime(
     server_key_file,
     server_cert_file,
     ca_cert_file,
-    using_real_caikit,
+    using_tgis_backend,
 ):
     """configures caikit for local testing"""
     models_directory = str(Path(__file__).parent / "tiny_models")
@@ -79,7 +79,7 @@ def caikit_nlp_runtime(
         "log": {"formatter": "pretty"},
     }
 
-    if using_real_caikit:
+    if using_tgis_backend:
         config["model_management"] = (
             {
                 "initializers": {

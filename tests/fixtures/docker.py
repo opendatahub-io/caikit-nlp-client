@@ -12,13 +12,13 @@ def docker_compose_file(pytestconfig):
 
 
 def pytest_addoption(parser):
-    """Adds --real-caikit option to pytest to test vs a real caikit+tgis instance"""
+    """Adds --tgis-backend option to pytest to test against the caikit+tgis stack."""
 
     parser.addoption(
-        "--real-caikit",
+        "--tgis-backend",
         action="store_true",
         default=False,
-        help="Test against a real caikit+tgis instance",
+        help="Test against a caikit+tgis instance using docker-compose",
     )
 
 

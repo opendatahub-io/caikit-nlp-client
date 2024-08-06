@@ -52,7 +52,7 @@ jobs:
 
       - name: Run tests
         run: |
-          nox -v --session tests-${{ matrix.python }} -- --real-caikit --cov-report=xml
+          nox -v --session tests-${{ matrix.python }} -- --tgis-backend --cov-report=xml
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v4

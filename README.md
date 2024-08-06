@@ -133,13 +133,12 @@ nox --list  # list available sessions
 nox --python 3.10 -s tests # run tests session for a specific python version
 ```
 
-### Testing against a real caikit+tgis stack
+### Testing against caikit+tgis stack
 
-Tests are run against a mocked instance of a TGIS backend by default. To test against a real
-caikit+tgis stack, it is sufficient to run using the `--real-caikit` flag when running `pytest`:
+Tests are run against a caikit standalone backend by default. To test against a caikit+tgis stack, it is sufficient to run using the `--tgis-backend` flag when running `pytest`:
 
 ```bash
-nox -s tests -- --real-caikit tests
+nox -s tests -- --tgis-backend tests
 ```
 
 _Notes:_

@@ -12,22 +12,22 @@ def http_server_thread_port():
 
 
 @pytest.fixture(scope="session")
-def using_real_caikit(pytestconfig):
-    return pytestconfig.option.real_caikit
+def using_tgis_backend(pytestconfig):
+    return pytestconfig.option.tgis_backend
 
 
 @pytest.fixture(scope="session")
 def http_client(
     caikit_nlp_runtime,
     http_server,
-    using_real_caikit,
+    using_tgis_backend,
     request: pytest.FixtureRequest,
     connection_type,
     client_cert_file,
     client_key_file,
     ca_cert_file,
 ) -> HttpClient:
-    if using_real_caikit:
+    if using_tgis_backend:
         if connection_type is not ConnectionType.INSECURE:
             pytest.skip(reason="not testing TLS with a docker caikit instance")
 
@@ -93,7 +93,7 @@ def http_server(
     client_cert_file,
     client_key_file,
 ):
-    if pytestconfig.option.real_caikit:
+    if pytestconfig.option.tgis_backend:
         if connection_type is not ConnectionType.INSECURE:
             pytest.skip(reason="not testing TLS with a docker caikit instance")
 
