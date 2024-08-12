@@ -25,6 +25,7 @@ jobs:
     env:
       FORCE_COLOR: "1"
       PRE_COMMIT_COLOR: "always"
+      PIP_EXTRA_INDEX_URL: "https://download.pytorch.org/whl/cpu"
 
     steps:
       - name: Check out the repository
