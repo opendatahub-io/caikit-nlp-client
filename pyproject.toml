@@ -63,7 +63,7 @@ tests = [
     "coverage[toml]",
     "grpcio-health-checking",
     "caikit-nlp==0.4.16",
-    "caikit[runtime-grpc,runtime-http]>=0.23.2,<0.27.0",
+    "caikit[runtime-grpc,runtime-http]>=0.23.2,<0.28.0",
 ]
 
 [tool.bandit]
