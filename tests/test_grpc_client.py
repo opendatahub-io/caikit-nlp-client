@@ -104,7 +104,7 @@ def test_request_exception_handling(
         detail = "user requested an exception"
         prompt = "[[raise exception]] dummy"
         match = f"{detail}"
-        match_stream = f"{stream_exc_prefix} {detail}"
+        match_stream = detail
         kwargs = {}
 
     with pytest.raises(
@@ -150,6 +150,7 @@ def test_get_text_generation_parameters(grpc_client):
         "generated_tokens": "bool",
         "token_logprobs": "bool",
         "token_ranks": "bool",
+        "include_stop_sequence": "boolean",
     }
     assert params == expected_params
 

@@ -120,8 +120,8 @@ class HttpClient:
         def simplify_parameter_schema(parameters: dict) -> dict:
             """recursively flattens openapi's spec into a human-friendly dict"""
 
-            if "$ref" in parameters["allOf"][0]:
-                value = parameters["allOf"][0]["$ref"]
+            if "$ref" in parameters:
+                value = parameters["$ref"]
                 prefix, name = value.rsplit("/", maxsplit=1)
                 assert prefix == "#/components/schemas"
                 params = openapi_spec["components"]["schemas"][name]["properties"]
@@ -130,7 +130,7 @@ class HttpClient:
 
             flattened = {}
             for param, description in params.items():
-                if "allOf" in description:
+                if "$ref" in description:
                     flattened[param] = simplify_parameter_schema(description)
                 else:
                     flattened[param] = description["type"]

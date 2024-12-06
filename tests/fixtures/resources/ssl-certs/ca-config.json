@@ -5,13 +5,13 @@
         "usages": [
           "client auth"
         ],
-        "expiry": "8760h"
+        "expiry": "87600h"
       },
       "server": {
         "usages": [
           "server auth"
         ],
-        "expiry": "8760h"
+        "expiry": "87600h"
       }
     }
   }
