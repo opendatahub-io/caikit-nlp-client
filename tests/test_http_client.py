@@ -279,7 +279,7 @@ def test_embedding_tasks(
         embedding_model_name, ["Sample text", "Sample text 2"]
     )
     assert "results" in resp
-    assert "vectors" in resp["result"]
+    assert "vectors" in resp["results"]
 
 
 def test_sentence_similarity(
@@ -316,7 +316,7 @@ def test_sentence_similarity_tasks(
         embedding_model_name, ["source text", "text 2"], ["source sent", "source tex"]
     )
     assert "results" in resp
-    assert "scores" in resp["results"]
+    assert "scores" in resp["results"][0]
     assert len(resp["results"]) == 2
     assert len(resp["results"][0]["scores"]) == 2
 
@@ -353,7 +353,7 @@ def test_rerank_tasks(
     assert "results" in resp
     assert len(resp["results"]) == 1
     assert "scores" in resp["results"][0]
-    assert "document" in resp["results"][0]["scores"]
+    assert "document" in resp["results"][0]["scores"][0]
 
 
 @pytest.mark.parametrize("connection_type", [ConnectionType.TLS], indirect=True)

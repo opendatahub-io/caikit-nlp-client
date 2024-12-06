@@ -12,5 +12,6 @@
       "OU": "CertificateAuthority",
       "ST": "North Carolina"
     }
-  ]
+  ],
+  "expiry": "87600h"
 }
