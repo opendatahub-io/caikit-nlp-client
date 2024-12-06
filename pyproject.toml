@@ -30,7 +30,7 @@ requires-python = ">=3.9"
 dependencies = [
     "protobuf>=4.22.0",
     "grpcio-reflection>=1.49.3",
-    "requests>=2.22",
+    "requests>=2.32.3",
 ]
 
 [project.urls]
