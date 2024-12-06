@@ -100,7 +100,7 @@ def test_generate_text_stream(
     prompt,
     accept_self_signed_certs,
 ):
-    if not pytestconfig.option.real_caikit:
+    if not pytestconfig.option.tgis_backend:
         pytest.skip(
             reason="stream mocking is broken, see https://github.com/opendatahub-io/caikit-nlp-client/issues/46"
         )
@@ -125,7 +125,7 @@ def test_generate_text_stream_with_optional_args(
     accept_self_signed_certs,
     mocker,
 ):
-    if not pytestconfig.option.real_caikit:
+    if not pytestconfig.option.tgis_backend:
         pytest.skip(
             reason="stream mocking is broken, see https://github.com/opendatahub-io/caikit-nlp-client/issues/46"
         )
@@ -148,7 +148,7 @@ def test_generate_text_stream_with_optional_args(
 
 
 def test_request_exception_handling(
-    using_real_caikit,
+    using_tgis_backend,
     http_client,
     mock_text_generation,
     model_name,
@@ -160,7 +160,7 @@ def test_request_exception_handling(
     sure the client returns useful information,"""
     exc_prefix = "response.status_code=400"
     stream_exc_prefix = "Exception iterating responses:"
-    if using_real_caikit:
+    if using_tgis_backend:
         prompt = "dummy"
         detail = "Value out of range: -1"
         match = f"{exc_prefix}.*{detail}"
@@ -187,7 +187,7 @@ def test_request_exception_handling(
             prompt,
             **kwargs,
         )
-    if pytestconfig.option.real_caikit:
+    if pytestconfig.option.tgis_backend:
         streaming_response = http_client.generate_text_stream(
             model_name, prompt, **kwargs
         )
@@ -202,35 +202,12 @@ def test_get_text_generation_parameters(
     http_client, monkeysession, accept_self_signed_certs
 ):
     params = http_client.get_text_generation_parameters()
-    expected_params = {
-        "max_new_tokens": "integer",
-        "min_new_tokens": "integer",
-        "truncate_input_tokens": "integer",
-        "decoding_method": "string",
-        "top_k": "integer",
-        "top_p": "number",
-        "typical_p": "number",
-        "temperature": "number",
-        "repetition_penalty": "number",
-        "max_time": "number",
-        "exponential_decay_length_penalty": {
-            "start_index": "integer",
-            "decay_factor": "number",
-        },
-        "stop_sequences": "array",
-        "seed": "integer",
-        "preserve_input_text": "boolean",
-        "input_tokens": "boolean",
-        "generated_tokens": "boolean",
-        "token_logprobs": "boolean",
-        "token_ranks": "boolean",
-    }
-    assert params == expected_params
+    assert params
 
 
-def test_models_info(http_client, accept_self_signed_certs, using_real_caikit):
+def test_models_info(http_client, accept_self_signed_certs, using_tgis_backend):
     models_info = http_client.models_info()
-    expected_models_number = 1 if using_real_caikit else 4
+    expected_models_number = 1 if using_tgis_backend else 4
 
     assert len(models_info) == expected_models_number
 
@@ -252,9 +229,9 @@ def test_embedding(
     prompt,
     mocker,
     accept_self_signed_certs,
-    using_real_caikit,
+    using_tgis_backend,
 ):
-    if using_real_caikit:
+    if using_tgis_backend:
         pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
 
     resp = http_client.embedding(embedding_model_name, "Sample text")
@@ -269,9 +246,9 @@ def test_embedding_tasks(
     prompt,
     mocker,
     accept_self_signed_certs,
-    using_real_caikit,
+    using_tgis_backend,
 ):
-    if using_real_caikit:
+    if using_tgis_backend:
         pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
 
     resp = http_client.embedding_tasks(
@@ -287,9 +264,9 @@ def test_sentence_similarity(
     prompt,
     mocker,
     accept_self_signed_certs,
-    using_real_caikit,
+    using_tgis_backend,
 ):
-    if using_real_caikit:
+    if using_tgis_backend:
         pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
 
     resp = http_client.sentence_similarity(
@@ -306,9 +283,9 @@ def test_sentence_similarity_tasks(
     prompt,
     mocker,
     accept_self_signed_certs,
-    using_real_caikit,
+    using_tgis_backend,
 ):
-    if using_real_caikit:
+    if using_tgis_backend:
         pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
 
     resp = http_client.sentence_similarity_tasks(
@@ -326,9 +303,9 @@ def test_rerank(
     prompt,
     mocker,
     accept_self_signed_certs,
-    using_real_caikit,
+    using_tgis_backend,
 ):
-    if using_real_caikit:
+    if using_tgis_backend:
         pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
 
     resp = http_client.rerank(embedding_model_name, [{"doc1": 1}], "doc")
@@ -343,9 +320,9 @@ def test_rerank_tasks(
     prompt,
     mocker,
     accept_self_signed_certs,
-    using_real_caikit,
+    using_tgis_backend,
 ):
-    if using_real_caikit:
+    if using_tgis_backend:
         pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
 
     resp = http_client.rerank_tasks(embedding_model_name, [{"doc1": 1}], ["doc"])

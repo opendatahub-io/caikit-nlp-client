@@ -88,9 +88,9 @@ def grpc_server(
     client_key,
     client_cert,
 ):
-    if pytestconfig.option.real_caikit:
+    if pytestconfig.option.tgis_backend:
         if connection_type is not ConnectionType.INSECURE:
-            pytest.skip(reason="not testing TLS with a docker caikit instance")
+            pytest.skip(reason="not testing TLS with a docker caikit+tgis stack")
         host, port = request.getfixturevalue("grpc_server_docker")
     else:
         host, port = request.getfixturevalue("grpc_server_thread")

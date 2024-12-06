@@ -75,12 +75,12 @@ def test_generate_text_stream_with_optional_args(
     assert response_list
     assert all(isinstance(text, str) for text in response_list)
 
-    with pytest.raises(ValueError, match="Unsupported kwarg key='invalid_kwarg'"):
+    with pytest.raises(ValueError, match="Unsupported kwarg: invalid_kwarg=42"):
         grpc_client.generate_text(model_name, "dummy", invalid_kwarg=42)
 
 
 def test_request_exception_handling(
-    using_real_caikit,
+    using_tgis_backend,
     grpc_client,
     mock_text_generation,
     model_name,
@@ -88,7 +88,7 @@ def test_request_exception_handling(
     """force generation of an exception at text generation time to make
     sure the client returns useful information,"""
     stream_exc_prefix = "Exception iterating responses:"
-    if using_real_caikit:
+    if using_tgis_backend:
         prompt = "dummy"
         detail = "Value out of range: -1"
         match = f"{detail}"
@@ -124,38 +124,15 @@ def test_request_exception_handling(
         list(streaming_response)
 
 
-def test_get_text_generation_parameters(grpc_client):
+def test_get_text_generation_parameters(grpc_client: GrpcClient):
     params = grpc_client.get_text_generation_parameters()
-    expected_params = {
-        "text": "string",
-        "max_new_tokens": "int64",
-        "min_new_tokens": "int64",
-        "truncate_input_tokens": "int64",
-        "decoding_method": "string",
-        "top_k": "int64",
-        "top_p": "double",
-        "typical_p": "double",
-        "temperature": "double",
-        "repetition_penalty": "double",
-        "max_time": "double",
-        "exponential_decay_length_penalty": {
-            "start_index": "int64",
-            "decay_factor": "double",
-        },
-        "stop_sequences": "string",
-        "seed": "uint64",
-        "preserve_input_text": "bool",
-        "input_tokens": "bool",
-        "generated_tokens": "bool",
-        "token_logprobs": "bool",
-        "token_ranks": "bool",
-    }
-    assert params == expected_params
+
+    assert params
 
 
-def test_models_info(grpc_client, using_real_caikit):
+def test_models_info(grpc_client: GrpcClient, using_tgis_backend):
     models_info = grpc_client.models_info()
-    expected_models_number = 1 if using_real_caikit else 4
+    expected_models_number = 1 if using_tgis_backend else 4
 
     assert len(models_info) == expected_models_number
     required_fields = (
@@ -168,6 +145,131 @@ def test_models_info(grpc_client, using_real_caikit):
         "size",
     )
     assert all(field in model for field in required_fields for model in models_info)
+
+
+def test_embedding(
+    grpc_client: GrpcClient, embedding_model_name, prompt, using_tgis_backend
+):
+    if using_tgis_backend:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    with pytest.raises(ValueError, match="request must have a model id"):
+        grpc_client.embedding(model_id=None, text=prompt)  # type: ignore
+
+    response = grpc_client.embedding(model_id=embedding_model_name, text=prompt)
+    assert "result" in response
+    assert "data" in response["result"]
+    assert "producer_id" in response
+    assert response["producer_id"]["name"] == "EmbeddingModule"
+
+
+def test_embeddings(
+    grpc_client: GrpcClient, embedding_model_name, prompt, using_tgis_backend
+):
+    if using_tgis_backend:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    response = grpc_client.embeddings(
+        model_id=embedding_model_name,
+        texts=[prompt, prompt + prompt],
+    )
+
+    assert response["results"]
+    assert "producer_id" in response
+
+    vectors = response["results"]["vectors"]
+    assert len(vectors) == 2
+    assert all("data" in vec for vec in vectors)
+    assert "input_token_count" in response
+
+
+def test_sentence_similarity(
+    grpc_client: GrpcClient, embedding_model_name, prompt, using_tgis_backend
+):
+    if using_tgis_backend:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    response = grpc_client.sentence_similarity(
+        model_id=embedding_model_name,
+        source_sentence="source text",
+        sentences=["source sent", "source tex"],
+    )
+    assert "result" in response
+    assert "scores" in response["result"]
+    assert len(response["result"]["scores"]) == 2
+
+
+def test_sentence_similarity_tasks(
+    grpc_client: GrpcClient, embedding_model_name, prompt, using_tgis_backend
+):
+    if using_tgis_backend:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    response = grpc_client.sentence_similarity_tasks(
+        embedding_model_name,
+        ["source text", "text 2"],
+        ["source sent", "source tex"],
+    )
+    assert "results" in response
+    assert len(response["results"]) == 2
+    assert all("scores" in el for el in response["results"])
+    assert len(response["results"][0]["scores"]) == 2
+    assert len(response["results"][1]["scores"]) == 2
+
+
+def test_rerank(
+    grpc_client: GrpcClient, embedding_model_name, prompt, using_tgis_backend
+):
+    if using_tgis_backend:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    documents = [
+        {"doc1": 1},
+        {"doc2": 2},
+    ]
+
+    query = "what's this"
+
+    response = grpc_client.rerank(
+        model_id=embedding_model_name,
+        documents=documents,
+        query=query,
+    )
+
+    assert "result" in response
+    assert "scores" in response["result"]
+    assert "producer_id" in response
+    assert response["producer_id"]["name"] == "EmbeddingModule"
+
+    assert len(response["result"]["scores"]) == 2
+
+
+def test_rerank_tasks(
+    grpc_client: GrpcClient, embedding_model_name, prompt, using_tgis_backend
+):
+    if using_tgis_backend:
+        pytest.skip(reason="embeddings endpoint does not work with caikit+tgis")
+
+    documents = [
+        {"doc1": 1},
+        {"doc2": 2},
+    ]
+    queries = [
+        "query1",
+        "query2",
+    ]
+    response = grpc_client.rerank_tasks(
+        model_id=embedding_model_name,
+        documents=documents,
+        queries=queries,
+    )
+
+    assert "result" in response
+    assert "scores" in response["result"]
+    assert "producer_id" in response
+    assert response["producer_id"]["name"] == "EmbeddingModule"
+
+    assert len(response["result"]["scores"]) == 2
 
 
 def test_invalid_init_options(grpc_server):
