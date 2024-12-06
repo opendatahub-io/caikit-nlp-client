@@ -4,8 +4,8 @@ import time
 import fastapi
 import pytest
 import uvicorn
-from caikit_nlp_client.utils import get_server_certificate
 
+from caikit_nlp_client.utils import get_server_certificate
 from tests.fixtures.utils import get_random_port
 
 

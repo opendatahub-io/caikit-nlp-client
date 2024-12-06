@@ -1,5 +1,6 @@
 import pytest
 import requests
+
 from caikit_nlp_client.http_client import HttpClient
 
 from .utils import ConnectionType, get_random_port, wait_until

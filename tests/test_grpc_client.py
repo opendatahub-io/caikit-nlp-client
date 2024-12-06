@@ -1,6 +1,7 @@
 from types import GeneratorType
 
 import pytest
+
 from caikit_nlp_client.grpc_client import GrpcClient
 
 from .fixtures.utils import ConnectionType

@@ -2,8 +2,9 @@ from typing import Optional
 
 import grpc
 import pytest
-from caikit_nlp_client.grpc_client import GrpcClient
 from grpc_health.v1 import health_pb2, health_pb2_grpc
+
+from caikit_nlp_client.grpc_client import GrpcClient
 
 from .utils import ConnectionType, get_random_port, wait_until
 

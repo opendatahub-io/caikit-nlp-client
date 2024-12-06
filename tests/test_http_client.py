@@ -3,8 +3,9 @@ from types import GeneratorType
 
 import pytest
 import requests
-from caikit_nlp_client import HttpClient
 from requests.exceptions import SSLError
+
+from caikit_nlp_client import HttpClient
 
 from .conftest import ConnectionType
 
